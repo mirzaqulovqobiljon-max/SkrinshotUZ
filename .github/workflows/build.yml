@@ -56,6 +56,9 @@ jobs:
 
       - name: Unit testlar
         run: |
+          # dotnet test xato kodi qaytarsa ham skript to'xtamasin — natijani o'zimiz tahlil qilamiz.
+          $ErrorActionPreference = 'Continue'
+          $PSNativeCommandUseErrorActionPreference = $false
           dotnet test SkrinshotUZ.sln -c Release --no-build `
             --logger "trx" `
             --logger "console;verbosity=normal" `
@@ -84,6 +87,7 @@ jobs:
               Write-Host "::error title=Yiqilgan test::$($r.testName) — $msg"
             }
           }
+          $ErrorActionPreference = 'Stop'
           $summary = $parts -join ' | '
           Write-Host "::notice title=Unit testlar::$summary"
           "**Unit testlar:** $summary" >> $env:GITHUB_STEP_SUMMARY
