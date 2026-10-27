@@ -67,7 +67,7 @@ jobs:
 
           # Test jarayoni yiqilsa (trx bo'lmasligi mumkin) — chiqishning oxirini annotatsiyaga chiqaramiz.
           if ($testExit -ne 0) {
-            $tail = (Get-Content test-output.txt | Where-Object { $_.Trim() } | Select-Object -Last 25) -join '%0A'
+            $tail = (Get-Content -LiteralPath test-output.txt | Where-Object { $_.Trim() } | Select-Object -Last 25) -join '%0A'
             Write-Host "::error title=dotnet test chiqishi (oxiri)::$tail"
           }
 
@@ -76,8 +76,10 @@ jobs:
           if ($trxFiles.Count -eq 0) { Write-Host "::error title=Unit testlar::trx fayl topilmadi (chiqish kodi $testExit)"; exit 1 }
           $parts = @()
           foreach ($trx in $trxFiles) {
-            [xml]$x = Get-Content $trx.FullName
+            # -LiteralPath: fayl nomida [1] kabi belgilar bo'lishi mumkin (oddiy -Path ularni andoza deb tushunadi).
+            [xml]$x = Get-Content -LiteralPath $trx.FullName -Raw
             $c = $x.TestRun.ResultSummary.Counters
+            if (-not $c -or -not $c.total) { Write-Host "::error title=Unit testlar::$($trx.Name) o'qilmadi"; exit 1 }
             $dll = ($x.TestRun.TestDefinitions.UnitTest | Select-Object -First 1).storage
             $name = if ($dll) { [IO.Path]::GetFileNameWithoutExtension($dll) } else { $trx.BaseName }
             $parts += "$name — jami $($c.total), o'tdi $($c.passed), yiqildi $($c.failed)"
