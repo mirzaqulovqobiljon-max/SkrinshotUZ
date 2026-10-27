@@ -150,7 +150,8 @@ public class AnnotationRendererTests
 
         Assert.Equal(new Size(120, 80), result.Size);
         Assert.True(IsRed(result.GetPixel(10, 30)), "to'rtburchakning chap cheti (10, y)");
-        Assert.True(IsWhite(result.GetPixel(60, 30)), "to'rtburchak ichi");
+        Assert.True(IsWhite(result.GetPixel(35, 30)), "to'rtburchak ichi (u natijada x=10..60)");
+        Assert.True(IsRed(result.GetPixel(60, 30)), "to'rtburchakning o'ng cheti");
         Assert.True(IsWhite(result.GetPixel(0, 0)), "soha tashqarisidagi chizma natijaga tushmasligi kerak");
     }
 }
