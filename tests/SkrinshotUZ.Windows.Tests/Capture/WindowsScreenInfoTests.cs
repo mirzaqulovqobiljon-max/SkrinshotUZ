@@ -29,6 +29,19 @@ public class WindowsScreenInfoTests
     }
 
     [Fact]
+    public void CaptureVirtualScreen_ReturnsCanvasSizedOpaqueImage()
+    {
+        // Regressiya: avval CopyFromScreen(SourceCopy | CaptureBlt) InvalidEnumArgumentException berardi.
+        var layout = WindowsScreenInfo.GetLayout();
+
+        using var screen = ScreenCapture.CaptureVirtualScreen(layout);
+
+        Assert.Equal(layout.CanvasSize, screen.Size);
+        var center = screen.GetPixel(screen.Width / 2, screen.Height / 2);
+        Assert.Equal(255, center.A); // skrinshot shaffof bo'lib qolmasligi kerak
+    }
+
+    [Fact]
     public void GetForegroundWindowBounds_DoesNotThrow()
     {
         var bounds = WindowsScreenInfo.GetForegroundWindowBounds();

@@ -143,6 +143,23 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
 
+    // ---------- Ekranni olish ----------
+
+    public const uint SRCCOPY = 0x00CC0020;
+
+    /// <summary>Qatlamli (shaffof) oynalarni ham olish.</summary>
+    public const uint CAPTUREBLT = 0x40000000;
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetDC(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool BitBlt(IntPtr hdc, int x, int y, int cx, int cy, IntPtr hdcSrc, int x1, int y1, uint rop);
+
     // ---------- Xotira ----------
 
     [DllImport("kernel32.dll")]

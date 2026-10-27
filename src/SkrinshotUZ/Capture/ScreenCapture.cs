@@ -1,5 +1,8 @@
+using System.ComponentModel;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using SkrinshotUZ.Core.Capture;
+using SkrinshotUZ.Native;
 
 namespace SkrinshotUZ.Capture;
 
@@ -8,7 +11,8 @@ internal static class ScreenCapture
 {
     /// <summary>
     /// Barcha monitorlarni bitta rasmga oladi (jismoniy piksellarda, masshtablashsiz).
-    /// CAPTUREBLT — shaffof/qatlamli oynalar (masalan, menyular, tooltip'lar) ham tushadi.
+    /// SRCCOPY | CAPTUREBLT — shaffof/qatlamli oynalar (menyular, tooltip'lar) ham tushadi.
+    /// (Graphics.CopyFromScreen bu bayroqlar birikmasini qabul qilmaydi — shuning uchun to'g'ridan-to'g'ri BitBlt.)
     /// Sichqoncha kursori rasmga tushmaydi.
     /// </summary>
     /// <param name="layout">Monitorlar joylashuvi.</param>
@@ -21,7 +25,26 @@ internal static class ScreenCapture
         try
         {
             using var g = Graphics.FromImage(bitmap);
-            g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size, CopyPixelOperation.SourceCopy | CopyPixelOperation.CaptureBlt);
+            IntPtr screenDc = NativeMethods.GetDC(IntPtr.Zero);
+            if (screenDc == IntPtr.Zero)
+            {
+                throw new Win32Exception("Ekran kontekstini (GetDC) olib bo'lmadi.");
+            }
+
+            IntPtr targetDc = g.GetHdc();
+            try
+            {
+                if (!NativeMethods.BitBlt(targetDc, 0, 0, bounds.Width, bounds.Height, screenDc, bounds.X, bounds.Y, NativeMethods.SRCCOPY | NativeMethods.CAPTUREBLT))
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+            }
+            finally
+            {
+                g.ReleaseHdc(targetDc);
+                NativeMethods.ReleaseDC(IntPtr.Zero, screenDc);
+            }
+
             return bitmap;
         }
         catch

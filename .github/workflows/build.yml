@@ -145,7 +145,7 @@ jobs:
             # To'liq skrinshot yo'li: ekran → overlay → soha → bufer.
             $capture = ([regex]::Match($text, '(?m)^capture=(.*?)\r?$')).Groups[1].Value
             if ($capture -like 'ok*') { Write-Host "::notice title=${rid} skrinshot yo'li::$capture" }
-            else { Write-Host "::warning title=${rid} skrinshot yo'li::$capture" }
+            else { throw "${rid}: skrinshot yo'li ishlamadi — $capture" }
             "- **${rid}** tutun testi o'tdi — ishchi xotira: $ws MB, shaxsiy: $priv MB, eng yuqori: $peak MB; tugmalar: $keys" >> $env:GITHUB_STEP_SUMMARY
             if ($ws -ge 40) { Write-Host "::warning::${rid}: xotira $ws MB (maqsad < 40 MB)" }
           }
