@@ -6,12 +6,12 @@ namespace SkrinshotUZ;
 
 /// <summary>
 /// CI uchun "tutun testi" (<c>--smoke-test</c>): haqiqiy tray holati ishga tushadi (tugmalar ro'yxatdan o'tadi,
-/// klaviatura hook'i o'rnatiladi, xotira bo'shatiladi), 3 soniya ishlaydi, keyin xotira sarfi va tugmalar holatini faylga yozib,
+/// klaviatura hook'i o'rnatiladi, xotira bo'shatiladi), 5 soniya ishlaydi (shu orada overlay orqali to'liq skrinshot yo'li sinaladi), keyin xotira sarfi va tugmalar holatini faylga yozib,
 /// o'zi yopiladi. Hech qanday oyna chiqmaydi, sozlamalar va reyestr o'zgarmaydi.
 /// </summary>
 internal static class SmokeTest
 {
-    private const int RunMilliseconds = 3000;
+    private const int RunMilliseconds = 5000;
 
     /// <summary>Taymerni ulaydi.</summary>
     /// <param name="context">Ilova holati.</param>
@@ -37,7 +37,7 @@ internal static class SmokeTest
         }
 
         // Xotira haqiqiy holatdagidek o'lchanadi: dastur ishga tushgach o'zi xotirani bo'shatgan,
-        // so'ng 3 soniya tray'da ishlagan. Bu yerda qo'shimcha tozalash QILINMAYDI.
+        // so'ng 5 soniya tray'da ishlagan (ichida overlay sinovi ham bo'ladi). Bu yerda qo'shimcha tozalash QILINMAYDI.
         using var process = Process.GetCurrentProcess();
         process.Refresh();
         var sb = new StringBuilder();

@@ -49,4 +49,9 @@
     <ProjectReference Include="..\SkrinshotUZ.Core\SkrinshotUZ.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Windows'ga bog'liq qismlar (ekranni olish, kesish, chop etish chizuvchisi) shu loyihada testlanadi. -->
+    <InternalsVisibleTo Include="SkrinshotUZ.Windows.Tests" />
+  </ItemGroup>
+
 </Project>

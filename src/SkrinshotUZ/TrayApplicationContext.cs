@@ -1,4 +1,8 @@
+using System.ComponentModel;
 using System.Globalization;
+using System.Runtime.InteropServices;
+using SkrinshotUZ.Capture;
+using SkrinshotUZ.Core.Capture;
 using SkrinshotUZ.Core.Hotkeys;
 using SkrinshotUZ.Core.Localization;
 using SkrinshotUZ.Core.Permissions;
@@ -39,6 +43,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private RegisteredWaitHandle? _activateWait;
     private SynchronizationContext? _ui;
     private bool _dialogOpen;
+    private bool _capturing;
+    private string? _smokeCaptureResult;
 
     /// <summary>Tray ikonkasini yaratadi; qolgan ishlar xabar sikli boshlangach bajariladi.</summary>
     /// <param name="options">Ishga tushirish parametrlari.</param>
@@ -92,8 +98,15 @@ internal sealed class TrayApplicationContext : ApplicationContext
     }
 
     /// <summary>Tutun testi hisobotiga qo'shiladigan diagnostika qatorlari.</summary>
-    public IEnumerable<string> DiagnosticLines =>
-        _hotkeys?.Status.Select(s => string.Create(CultureInfo.InvariantCulture, $"hotkey.{s.Hotkey}={s.Mode}")) ?? Enumerable.Empty<string>();
+    public IEnumerable<string> DiagnosticLines
+    {
+        get
+        {
+            var lines = _hotkeys?.Status.Select(s => string.Create(CultureInfo.InvariantCulture, $"hotkey.{s.Hotkey}={s.Mode}")).ToList() ?? new List<string>();
+            lines.Add("capture=" + (_smokeCaptureResult ?? "not-run"));
+            return lines;
+        }
+    }
 
     protected override void ExitThreadCore()
     {
@@ -137,6 +150,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
             // CI: hech qanday oyna yo'q, foydalanuvchi sozlamalari va reyestr o'zgarmaydi —
             // faqat tugmalarni ro'yxatdan o'tkazish mexanizmi haqiqiy Windows'da tekshiriladi.
             _hotkeys.Apply(printScreenAllowed: true);
+
+            // To'liq yo'l: ekranni olish → overlay oyna → soha → buferga nusxa → buferdan qayta o'qish.
+            _ui.Post(_ => _smokeCaptureResult = RunSmokeCapture(), null);
             MemoryTrimmer.Trim();
             return;
         }
@@ -177,15 +193,133 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
-    /// <summary>
-    /// 2-bosqich: amal hali yo'q — qaysi tugma qabul qilinganini ko'rsatamiz (qo'lda tekshirish uchun).
-    /// 3-bosqichda bu yerda soha tanlash oynasi ochiladi.
-    /// </summary>
     private void OnAction(HotkeyAction action, string source)
     {
-        ShowBalloon(
-            string.Format(CultureInfo.CurrentCulture, Strings.Placeholder_ActionTriggered, UiText.ActionName(action), source),
-            ToolTipIcon.Info);
+        switch (action)
+        {
+            case HotkeyAction.CaptureRegion:
+                StartCapture(presetScreenRect: null);
+                break;
+            case HotkeyAction.CaptureActiveWindow:
+                // Faol oyna hozir, overlay ochilishidan OLDIN aniqlanadi.
+                StartCapture(WindowsScreenInfo.GetForegroundWindowBounds());
+                break;
+            default:
+                // Shift+PrintScreen (darhol saqlash) — 5-bosqichda.
+                ShowBalloon(
+                    string.Format(CultureInfo.CurrentCulture, Strings.Placeholder_ActionTriggered, UiText.ActionName(action), source),
+                    ToolTipIcon.Info);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Ekranni oladi va soha tanlash oynasini ochadi. 3-bosqich: tanlangan soha buferga nusxalanadi
+    /// (4-bosqichda bu yerda tahrirlash asboblari paydo bo'ladi).
+    /// </summary>
+    private void StartCapture(Rectangle? presetScreenRect)
+    {
+        if (_capturing)
+        {
+            return; // overlay allaqachon ochiq
+        }
+
+        _capturing = true;
+        try
+        {
+            ScreenLayout layout;
+            Bitmap screen;
+            try
+            {
+                layout = WindowsScreenInfo.GetLayout();
+                screen = ScreenCapture.CaptureVirtualScreen(layout);
+            }
+            catch (Exception ex) when (ex is Win32Exception or ExternalException or ArgumentException or OutOfMemoryException)
+            {
+                ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.Capture_Failed, ex.Message), ToolTipIcon.Warning);
+                return;
+            }
+
+            using (screen)
+            using (var overlay = new CaptureOverlayForm(layout, screen, presetScreenRect))
+            {
+                if (overlay.ShowDialog() == DialogResult.OK && overlay.Result is Rectangle selection)
+                {
+                    using var cropped = ScreenCapture.Crop(screen, selection);
+                    if (CopyToClipboard(cropped))
+                    {
+                        ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.Capture_Copied, OverlayLayout.SizeText(cropped.Size)), ToolTipIcon.Info);
+                    }
+                    else
+                    {
+                        ShowBalloon(Strings.Capture_ClipboardBusy, ToolTipIcon.Warning);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            _capturing = false;
+            MemoryTrimmer.Trim(); // katta ekran rasmlari endi kerak emas
+        }
+    }
+
+    /// <summary>Buferga nusxa (bufer boshqa dastur tomonidan band bo'lsa — bir necha marta urinadi).</summary>
+    private static bool CopyToClipboard(Bitmap image)
+    {
+        try
+        {
+            var data = new DataObject();
+            data.SetImage(image);
+            Clipboard.SetDataObject(data, copy: true, retryTimes: 10, retryDelay: 100);
+            return true;
+        }
+        catch (ExternalException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>CI tutun testi: overlay'ni haqiqiy Windows'da ochib, soha tanlab, buferdan natijani tekshiradi.</summary>
+    private string RunSmokeCapture()
+    {
+        try
+        {
+            var layout = WindowsScreenInfo.GetLayout();
+            using var screen = ScreenCapture.CaptureVirtualScreen(layout);
+            var expected = new Rectangle(
+                Math.Max(0, (layout.CanvasSize.Width / 2) - 100),
+                Math.Max(0, (layout.CanvasSize.Height / 2) - 50),
+                Math.Min(200, layout.CanvasSize.Width),
+                Math.Min(100, layout.CanvasSize.Height));
+
+            using var overlay = new CaptureOverlayForm(layout, screen, null);
+            overlay.Shown += (_, _) => overlay.AcceptForTest(expected);
+            if (overlay.ShowDialog() != DialogResult.OK || overlay.Result is not Rectangle selection || selection != expected)
+            {
+                return "error: overlay natijasi kutilganidek emas";
+            }
+
+            using var cropped = ScreenCapture.Crop(screen, selection);
+            if (!CopyToClipboard(cropped))
+            {
+                return "error: bufer band";
+            }
+
+            using var fromClipboard = Clipboard.GetImage();
+            string monitors = string.Join(";", layout.Monitors.Select(m => string.Create(CultureInfo.InvariantCulture, $"{m.Bounds.Width}x{m.Bounds.Height}@{m.Dpi}")));
+            return fromClipboard is not null && fromClipboard.Size == cropped.Size
+                ? string.Create(CultureInfo.InvariantCulture, $"ok {cropped.Width}x{cropped.Height} canvas={layout.CanvasSize.Width}x{layout.CanvasSize.Height} monitors={monitors}")
+                : "error: buferdagi rasm o'lchami mos emas";
+        }
+        catch (Exception ex) when (ex is Win32Exception or ExternalException or ArgumentException or InvalidOperationException)
+        {
+            return "error: " + ex.GetType().Name + ": " + ex.Message.Replace('\r', ' ').Replace('\n', ' ');
+        }
+        finally
+        {
+            MemoryTrimmer.Trim();
+        }
     }
 
     private void RefreshMenu()

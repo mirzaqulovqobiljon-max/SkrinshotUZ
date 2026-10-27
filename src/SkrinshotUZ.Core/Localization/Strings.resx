@@ -162,4 +162,23 @@ Xatolik haqida ma'lumot shu faylga yozildi:
     <value>ikonka menyusi</value>
     <comment>Placeholder_ActionTriggered uchun {1}: buyruq tray ikonkadan berilgan</comment>
   </data>
+  <data name="Overlay_Hint" xml:space="preserve">
+    <value>Kerakli sohani sichqoncha bilan belgilang   •   Esc — bekor qilish</value>
+    <comment>Overlay maslahati (soha hali yo'q)</comment>
+  </data>
+  <data name="Overlay_HintSelected" xml:space="preserve">
+    <value>Ramkani surish yoki burchagidan o'zgartirish mumkin   •   Enter yoki ikki marta bosish — nusxa olish   •   Esc — bekor qilish</value>
+    <comment>Overlay maslahati (soha tanlangan; 3-bosqich)</comment>
+  </data>
+  <data name="Capture_Copied" xml:space="preserve">
+    <value>Skrinshot ({0} px) nusxa olindi. Uni Paint, Word yoki Telegram'ga Ctrl+V bilan qo'yishingiz mumkin.</value>
+    <comment>{0} — o'lcham, masalan 1280 × 720</comment>
+  </data>
+  <data name="Capture_Failed" xml:space="preserve">
+    <value>Ekran rasmini olib bo'lmadi: {0}</value>
+    <comment>{0} — xatolik matni</comment>
+  </data>
+  <data name="Capture_ClipboardBusy" xml:space="preserve">
+    <value>Buferga nusxa olib bo'lmadi — uni boshqa dastur band qilgan. Qayta urinib ko'ring.</value>
+  </data>
 </root>

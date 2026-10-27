@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B217D119
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkrinshotUZ.Core.Tests", "tests\SkrinshotUZ.Core.Tests\SkrinshotUZ.Core.Tests.csproj", "{56BE7020-3BCF-4510-AB17-0FFE26E0DEF9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkrinshotUZ.Windows.Tests", "tests\SkrinshotUZ.Windows.Tests\SkrinshotUZ.Windows.Tests.csproj", "{8B2E4F61-3A9C-4D17-B5E2-6C0F1A7D9E24}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,10 +36,15 @@ Global
 		{3D7A5C21-8E4B-4F2A-9C61-7B0E2D4A9F13}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D7A5C21-8E4B-4F2A-9C61-7B0E2D4A9F13}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D7A5C21-8E4B-4F2A-9C61-7B0E2D4A9F13}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B2E4F61-3A9C-4D17-B5E2-6C0F1A7D9E24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B2E4F61-3A9C-4D17-B5E2-6C0F1A7D9E24}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B2E4F61-3A9C-4D17-B5E2-6C0F1A7D9E24}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B2E4F61-3A9C-4D17-B5E2-6C0F1A7D9E24}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{56BE5B76-FCEF-404B-A545-21A9CE38E011} = {AA96FCB9-DA54-468F-A338-DD5F279978BF}
 		{3D7A5C21-8E4B-4F2A-9C61-7B0E2D4A9F13} = {AA96FCB9-DA54-468F-A338-DD5F279978BF}
 		{56BE7020-3BCF-4510-AB17-0FFE26E0DEF9} = {B217D119-BBA0-4607-9087-D94793395D54}
+		{8B2E4F61-3A9C-4D17-B5E2-6C0F1A7D9E24} = {B217D119-BBA0-4607-9087-D94793395D54}
 	EndGlobalSection
 EndGlobal
