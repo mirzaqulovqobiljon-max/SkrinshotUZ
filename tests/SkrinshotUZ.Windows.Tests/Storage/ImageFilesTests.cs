@@ -156,17 +156,33 @@ public sealed class ImageFilesTests : IDisposable
     }
 
     [Fact]
-    public void Thumbnail_OfOnePixelImage_DoesNotThrow()
+    public void Thumbnail_OfSmallImage_IsNotEnlarged_AndKeepsExactColors()
     {
-        string path = Path.Combine(_dir, "bir.png");
+        // 1×1 va 10×6 rasmlar 64×40 rasmchada asl o'lchamda, markazda, rangi aynan saqlanadi (xiralik yo'q).
+        string one = Path.Combine(_dir, "bir.png");
         using (var image = new Bitmap(1, 1))
         {
             image.SetPixel(0, 0, Color.Lime);
-            ImageSaver.Save(image, path, ImageFileFormat.Png);
+            ImageSaver.Save(image, one, ImageFileFormat.Png);
         }
 
-        using var thumb = Thumbnails.Create(path, new Size(64, 40));
-        Assert.NotNull(thumb);
-        Assert.Equal(Color.Lime.ToArgb(), thumb!.GetPixel(32, 20).ToArgb());
+        using (var thumb = Thumbnails.Create(one, new Size(64, 40)))
+        {
+            Assert.NotNull(thumb);
+            Assert.Equal(Color.Lime.ToArgb(), thumb!.GetPixel(31, 19).ToArgb());
+            Assert.Equal(Color.FromArgb(243, 243, 243).ToArgb(), thumb.GetPixel(33, 19).ToArgb());
+        }
+
+        string small = Path.Combine(_dir, "kichik.png");
+        using (var image = TwoTone(10, 6))
+        {
+            ImageSaver.Save(image, small, ImageFileFormat.Png);
+        }
+
+        using var t = Thumbnails.Create(small, new Size(64, 40));
+        Assert.Equal(Color.Red.ToArgb(), t!.GetPixel(27, 17).ToArgb());  // x 27..31 qizil
+        Assert.Equal(Color.Blue.ToArgb(), t.GetPixel(36, 22).ToArgb());  // x 32..36 ko'k
+        Assert.Equal(Color.FromArgb(243, 243, 243).ToArgb(), t.GetPixel(26, 17).ToArgb());
+        Assert.Equal(Color.FromArgb(243, 243, 243).ToArgb(), t.GetPixel(37, 17).ToArgb());
     }
 }

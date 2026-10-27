@@ -86,10 +86,19 @@ internal static class Thumbnails
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-            double scale = Math.Min((double)size.Width / image.Width, (double)size.Height / image.Height);
+            // Kichik rasm kattalashtirilmaydi (xiralashib ketadi) — asl o'lchamda markazda turadi.
+            double scale = Math.Min(1.0, Math.Min((double)size.Width / image.Width, (double)size.Height / image.Height));
             int w = Math.Max(1, (int)Math.Round(image.Width * scale));
             int h = Math.Max(1, (int)Math.Round(image.Height * scale));
-            g.DrawImage(image, (size.Width - w) / 2, (size.Height - h) / 2, w, h);
+            if (scale >= 1.0)
+            {
+                g.InterpolationMode = InterpolationMode.NearestNeighbor; // 1:1 — piksel-piksel nusxa
+                g.PixelOffsetMode = PixelOffsetMode.Half;
+            }
+
+            using var attributes = new ImageAttributes();
+            attributes.SetWrapMode(WrapMode.TileFlipXY); // chetlarda fon bilan aralashgan "halo" bo'lmasin
+            g.DrawImage(image, new Rectangle((size.Width - w) / 2, (size.Height - h) / 2, w, h), 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, attributes);
             using var border = new Pen(Color.FromArgb(200, 200, 200));
             g.DrawRectangle(border, 0, 0, size.Width - 1, size.Height - 1);
             return thumb;
