@@ -158,6 +158,10 @@ jobs:
             $capture = ([regex]::Match($text, '(?m)^capture=(.*?)\r?$')).Groups[1].Value
             if ($capture -like 'ok*') { Write-Host "::notice title=${rid} skrinshot yo'li::$capture" }
             else { throw "${rid}: skrinshot yo'li ishlamadi — $capture" }
+            # Saqlash yo'li: PNG + JPG faylga yozish, qayta o'qish, tarix oynasi.
+            $save = ([regex]::Match($text, '(?m)^save=(.*?)\r?$')).Groups[1].Value
+            if ($save -like 'ok*') { Write-Host "::notice title=${rid} saqlash::$save" }
+            else { throw "${rid}: saqlash ishlamadi — $save" }
             "- **${rid}** tutun testi o'tdi — ishchi xotira: $ws MB, shaxsiy: $priv MB, eng yuqori: $peak MB; tugmalar: $keys" >> $env:GITHUB_STEP_SUMMARY
             if ($ws -ge 40) { Write-Host "::warning::${rid}: xotira $ws MB (maqsad < 40 MB)" }
           }
@@ -177,6 +181,23 @@ jobs:
           for ($i = 0; $i -lt $n; $i++) {
             $chunk = $b64.Substring($i * $size, [math]::Min($size, $b64.Length - $i * $size))
             Write-Host "::notice title=panel-png $($i + 1)/$n::$chunk"
+          }
+
+      - name: Tarix oynasi rasmi (ko'rib chiqish uchun)
+        run: |
+          $report = Join-Path $env:RUNNER_TEMP "smoke-win-x64.txt"
+          $line = (Get-Content -LiteralPath $report | Where-Object { $_ -like 'history=*' } | Select-Object -First 1)
+          if (-not $line) { Write-Host "::warning::tarix rasmi topilmadi"; exit 0 }
+          $parts = $line.Substring(8) -split ' png=', 2
+          Write-Host "::notice title=tarix-info::$($parts[0])"
+          if ($parts.Count -lt 2) { exit 0 }
+          $b64 = $parts[1]
+          $size = 4000   # GitHub annotatsiya matnini 4096 belgida kesadi
+          $n = [math]::Ceiling($b64.Length / $size)
+          if ($n -gt 9) { Write-Host "::warning::tarix rasmi juda katta ($($b64.Length) belgi)"; exit 0 }
+          for ($i = 0; $i -lt $n; $i++) {
+            $chunk = $b64.Substring($i * $size, [math]::Min($size, $b64.Length - $i * $size))
+            Write-Host "::notice title=tarix-png $($i + 1)/$n::$chunk"
           }
 
       - name: SkrinshotUZ.exe (64-bit) ni Artifacts'ga qo'yish

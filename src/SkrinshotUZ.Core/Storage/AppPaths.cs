@@ -24,6 +24,15 @@ public static class AppPaths
         return Path.Combine(appData, AppFolderName, "settings.json");
     }
 
+    /// <summary>Tarix fayli: <c>%APPDATA%\Skrinshot UZ\history.json</c>.</summary>
+    /// <param name="appData">ApplicationData (Roaming) papkasi.</param>
+    /// <returns>To'liq yo'l.</returns>
+    public static string HistoryFile(string appData)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appData);
+        return Path.Combine(appData, AppFolderName, "history.json");
+    }
+
     /// <summary>Skrinshotlar uchun standart papka: <c>Rasmlar\Skrinshot UZ</c>.</summary>
     /// <param name="myPictures">Foydalanuvchining "Rasmlar" (My Pictures) papkasi.</param>
     /// <returns>To'liq yo'l.</returns>

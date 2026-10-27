@@ -16,18 +16,72 @@ public interface ISettingsStore
 }
 
 /// <summary>
-/// JSON faylda saqlash. Yozish xavfsiz: avval vaqtinchalik faylga, keyin almashtiriladi —
-/// kompyuter yozish paytida o'chib qolsa ham fayl buzilmaydi. Buzilgan fayl <c>.bad</c> qilib saqlab qo'yiladi.
+/// JSON fayl bilan xavfsiz ishlash: yozish avval vaqtinchalik faylga, keyin almashtiriladi —
+/// kompyuter yozish paytida o'chib qolsa ham fayl buzilmaydi. Buzilgan fayl <c>.bad</c> qilib saqlab qo'yiladi
+/// va standart qiymat qaytariladi (dastur ishlayveradi).
 /// </summary>
-public sealed class JsonSettingsStore : ISettingsStore
+internal static class JsonFile
 {
-    private static readonly JsonSerializerOptions Options = new()
+    public static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() },
     };
 
+    public static T Read<T>(string path, Func<T> fallback)
+    {
+        string json;
+        try
+        {
+            if (!File.Exists(path))
+            {
+                return fallback();
+            }
+
+            json = File.ReadAllText(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return fallback();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json, Options) ?? fallback();
+        }
+        catch (JsonException)
+        {
+            try
+            {
+                File.Move(path, path + ".bad", overwrite: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Zaxira nusxa olinmasa ham, dastur standart qiymat bilan ishlayveradi.
+            }
+
+            return fallback();
+        }
+    }
+
+    public static void Write<T>(string path, T value)
+    {
+        string? folder = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(folder))
+        {
+            Directory.CreateDirectory(folder);
+        }
+
+        string temp = path + ".tmp";
+        File.WriteAllText(temp, JsonSerializer.Serialize(value, Options));
+        File.Move(temp, path, overwrite: true);
+    }
+}
+
+/// <summary>Sozlamalar JSON faylda (<see cref="JsonFile"/> qoidalari bilan).</summary>
+public sealed class JsonSettingsStore : ISettingsStore
+{
     private readonly string _path;
 
     /// <summary>Yangi ombor.</summary>
@@ -42,59 +96,12 @@ public sealed class JsonSettingsStore : ISettingsStore
     public string Path => _path;
 
     /// <inheritdoc />
-    public AppSettings Load()
-    {
-        string json;
-        try
-        {
-            if (!File.Exists(_path))
-            {
-                return new AppSettings();
-            }
-
-            json = File.ReadAllText(_path);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return new AppSettings();
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<AppSettings>(json, Options) ?? new AppSettings();
-        }
-        catch (JsonException)
-        {
-            BackupCorruptFile();
-            return new AppSettings();
-        }
-    }
+    public AppSettings Load() => JsonFile.Read(_path, () => new AppSettings());
 
     /// <inheritdoc />
     public void Save(AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-
-        string? folder = System.IO.Path.GetDirectoryName(_path);
-        if (!string.IsNullOrEmpty(folder))
-        {
-            Directory.CreateDirectory(folder);
-        }
-
-        string temp = _path + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(settings, Options));
-        File.Move(temp, _path, overwrite: true);
-    }
-
-    private void BackupCorruptFile()
-    {
-        try
-        {
-            File.Move(_path, _path + ".bad", overwrite: true);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // Zaxira nusxa olinmasa ham, dastur standart sozlamalar bilan ishlayveradi.
-        }
+        JsonFile.Write(_path, settings);
     }
 }

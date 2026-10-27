@@ -79,6 +79,9 @@ public sealed class PermissionFlow
     /// <summary>PrintScreen tugmasiga ruxsat berilganmi.</summary>
     public bool PrintScreenAllowed => Settings.PrintScreenConsent == ConsentState.Allowed;
 
+    /// <summary>Sozlamalarni saqlaydi (masalan, saqlash papkasi o'zgarganda). Xato bo'lsa — bir marta ogohlantiradi.</summary>
+    public void SaveSettings() => Save();
+
     /// <summary>
     /// Ishga tushishda: hali so'ralmagan bo'lsa — PrintScreen ruxsatini so'raydi;
     /// ruxsat berilgan va Qirqish vositasi PrintScreen'ni egallagan bo'lsa — bir marta taklif qiladi.

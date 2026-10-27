@@ -8,6 +8,16 @@ using SkrinshotUZ.Native;
 
 namespace SkrinshotUZ.Capture;
 
+/// <summary>Overlay qanday yakunlandi.</summary>
+internal enum OverlayAction
+{
+    /// <summary>Buferga nusxa (Enter, Ctrl+C, "Nusxa olish").</summary>
+    Copy,
+
+    /// <summary>Faylga saqlash (Ctrl+S, "Saqlash") — yo'l <see cref="CaptureOverlayForm.SavePath"/> da.</summary>
+    Save,
+}
+
 /// <summary>
 /// Soha tanlash va tahrirlash oynasi: barcha monitorlarni qoplaydi, ekranning "muzlatilgan" rasmini xiralashtirib
 /// ko'rsatadi, tanlangan soha asl yorug'likda; soha yonida asboblar va amallar paneli.
@@ -79,6 +89,18 @@ internal sealed class CaptureOverlayForm : Form
 
     /// <summary>Tanlangan soha (kanvas koordinatalarida) — faqat <see cref="DialogResult.OK"/> bo'lsa.</summary>
     public Rectangle? Result { get; private set; }
+
+    /// <summary>Qanday yakunlandi (nusxa yoki saqlash).</summary>
+    public OverlayAction Action { get; private set; } = OverlayAction.Copy;
+
+    /// <summary>Saqlash yo'li (<see cref="OverlayAction.Save"/> bo'lsa).</summary>
+    public string? SavePath { get; private set; }
+
+    /// <summary>
+    /// Saqlash oynasini ko'rsatuvchi (tray konteksti beradi — u sozlamalardagi papka va formatni biladi).
+    /// Foydalanuvchi bekor qilsa — <c>null</c>, overlay ochiq qoladi.
+    /// </summary>
+    public Func<IWin32Window, string?>? SavePathProvider { get; set; }
 
     /// <summary>Chizmalar (kanvas koordinatalarida).</summary>
     public IReadOnlyList<Annotation> Annotations => _history.Items;
@@ -386,6 +408,9 @@ internal sealed class CaptureOverlayForm : Form
             case Keys.C when ctrl:
                 Accept();
                 return true;
+            case Keys.S when ctrl:
+                SaveAs();
+                return true;
             case Keys.Z when ctrl && shift:
             case Keys.Y when ctrl:
                 Redo();
@@ -479,6 +504,7 @@ internal sealed class CaptureOverlayForm : Form
         _toolbars.UndoClicked += (_, _) => Undo();
         _toolbars.RedoClicked += (_, _) => Redo();
         _toolbars.CopyClicked += (_, _) => Accept();
+        _toolbars.SaveClicked += (_, _) => SaveAs();
         _toolbars.CloseClicked += (_, _) => Cancel();
         RefreshToolbarState();
     }
@@ -617,7 +643,29 @@ internal sealed class CaptureOverlayForm : Form
 
     // ---------- Ko'rinish ----------
 
-    private void Accept()
+    private void SaveAs()
+    {
+        if (_textBox is not null)
+        {
+            CommitText();
+        }
+
+        if (!_selection.HasSelection || _selection.IsDragging || _editor.IsDrawing || SavePathProvider is null)
+        {
+            return;
+        }
+
+        string? path = SavePathProvider(this);
+        if (path is null)
+        {
+            return; // saqlash oynasida "Bekor qilish" — tahrirlash davom etadi
+        }
+
+        SavePath = path;
+        Accept(OverlayAction.Save);
+    }
+
+    private void Accept(OverlayAction action = OverlayAction.Copy)
     {
         if (_textBox is not null)
         {
@@ -630,6 +678,7 @@ internal sealed class CaptureOverlayForm : Form
         }
 
         Result = _selection.Selection;
+        Action = action;
         DialogResult = DialogResult.OK;
         Close();
     }

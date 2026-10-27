@@ -78,10 +78,9 @@ internal sealed class EditorToolbars : IDisposable
         Tools.Items.Add(_redo);
 
         _copy = ActionButton(Strings.Action_Copy, () => CopyClicked?.Invoke(this, EventArgs.Empty));
-        _save = ActionButton(Strings.Action_Save, () => { });
+        _save = ActionButton(Strings.Action_Save, () => SaveClicked?.Invoke(this, EventArgs.Empty));
         _print = ActionButton(Strings.Action_Print, () => { });
         _close = ActionButton(Strings.Action_Close, () => CloseClicked?.Invoke(this, EventArgs.Empty));
-        _save.Enabled = false;   // 5-bosqichda
         _print.Enabled = false;  // 6-bosqichda
         Actions.Items.AddRange(new ToolStripItem[] { _copy, _save, _print, new ToolStripSeparator(), _close });
     }
@@ -99,6 +98,8 @@ internal sealed class EditorToolbars : IDisposable
     public event EventHandler? RedoClicked;
 
     public event EventHandler? CopyClicked;
+
+    public event EventHandler? SaveClicked;
 
     public event EventHandler? CloseClicked;
 

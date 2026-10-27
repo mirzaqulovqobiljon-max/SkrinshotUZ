@@ -98,6 +98,26 @@ internal static class SmokeTest
         }
     }
 
+    /// <summary>Rasmni kichraytirib JPG (base64) qiladi — CI annotatsiyasiga sig'ishi uchun.</summary>
+    internal static string ToJpegBase64(Bitmap image, double scale, long quality)
+    {
+        int w = Math.Max(1, (int)(image.Width * scale));
+        int h = Math.Max(1, (int)(image.Height * scale));
+        using var small = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+        using (var g = Graphics.FromImage(small))
+        {
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.DrawImage(image, 0, 0, w, h);
+        }
+
+        var codec = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
+        using var parameters = new EncoderParameters(1);
+        parameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, quality);
+        using var stream = new MemoryStream();
+        small.Save(stream, codec, parameters);
+        return Convert.ToBase64String(stream.ToArray());
+    }
+
     private static void WriteReport(string? reportPath, Func<IEnumerable<string>> extraLines)
     {
         if (reportPath is null)

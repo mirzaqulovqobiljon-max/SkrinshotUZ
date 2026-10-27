@@ -37,6 +37,12 @@ public sealed class AppSettings
     /// </summary>
     public bool SnippingToolDisabledByApp { get; set; }
 
+    /// <summary>Oxirgi marta saqlangan papka (bo'sh bo'lsa — "Rasmlar\Skrinshot UZ").</summary>
+    public string? LastSaveFolder { get; set; }
+
+    /// <summary>Saqlash formati (oxirgi tanlangani; standart — PNG).</summary>
+    public Storage.ImageFileFormat SaveFormat { get; set; } = Storage.ImageFileFormat.Png;
+
     /// <summary>Nusxa.</summary>
     /// <returns>Yangi obyekt.</returns>
     public AppSettings Clone() => (AppSettings)MemberwiseClone();
