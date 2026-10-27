@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Platformaga bog'liq bo'lmagan toza mantiq: chop etish maketi hisoblari, fayl nomlari,
+    sozlamalar, ruxsat mantiqi va interfeys matnlari. WinForms'ga bog'liq emas — shuning uchun to'liq unit-test qilinadi.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>SkrinshotUZ.Core</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SkrinshotUZ.Core.Tests" />
+  </ItemGroup>
+
+  <!--
+    Interfeys matnlari. Strings.resx — asosiy til (o'zbek, lotin).
+    Keyin Strings.uz-Cyrl.resx va Strings.ru.resx qo'shiladi — kod o'zgarmaydi.
+    Kuchli tiplangan Strings sinfi build paytida avtomatik yaratiladi (Visual Studio shart emas).
+  -->
+  <ItemGroup>
+    <EmbeddedResource Update="Localization\Strings.resx">
+      <StronglyTypedFileName>$(IntermediateOutputPath)Strings.Designer.cs</StronglyTypedFileName>
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>SkrinshotUZ.Core.Localization</StronglyTypedNamespace>
+      <StronglyTypedClassName>Strings</StronglyTypedClassName>
+      <PublicClass>true</PublicClass>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

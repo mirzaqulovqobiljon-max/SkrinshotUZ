@@ -1,0 +1,126 @@
+# Skrinshot UZ — Windows'da yig'ish, testlash va .exe chiqarish.
+# Har push'da: build (ogohlantirishlarsiz) → unit testlar → win-x64 va win-x86 bitta .exe →
+# tutun testi (.exe haqiqatan ishga tushadimi, xotira qancha) → Artifacts.
+name: Build va test
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  build:
+    name: Windows — build, test, .exe
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Kodni olish
+        uses: actions/checkout@v4
+
+      - name: .NET 8 SDK o'rnatish
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Versiyani aniqlash
+        id: version
+        run: |
+          $v = "0.1.$env:GITHUB_RUN_NUMBER"
+          if ($env:GITHUB_REF -like 'refs/tags/v*') { $v = $env:GITHUB_REF_NAME.Substring(1) }
+          "value=$v" >> $env:GITHUB_OUTPUT
+          Write-Host "Versiya: $v"
+
+      - name: Paketlarni tiklash
+        run: dotnet restore SkrinshotUZ.sln
+
+      - name: Build (ogohlantirishlarsiz)
+        run: dotnet build SkrinshotUZ.sln -c Release --no-restore -warnaserror -p:Version=${{ steps.version.outputs.value }}
+
+      - name: Unit testlar
+        run: >
+          dotnet test SkrinshotUZ.sln -c Release --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --logger "console;verbosity=normal"
+          --results-directory TestResults
+
+      - name: Test natijalarini saqlash
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-natijalari
+          path: TestResults/**/*.trx
+          if-no-files-found: warn
+
+      - name: Bitta .exe yig'ish (win-x64 va win-x86)
+        run: |
+          foreach ($rid in 'win-x64', 'win-x86') {
+            dotnet publish src/SkrinshotUZ/SkrinshotUZ.csproj -c Release -r $rid --self-contained true `
+              -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+              -p:Version=${{ steps.version.outputs.value }} -o "publish/$rid"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            $exe = "publish/$rid/SkrinshotUZ.exe"
+            if (-not (Test-Path $exe)) { throw "${rid}: $exe topilmadi" }
+
+            $other = Get-ChildItem "publish/$rid" -File | Where-Object { $_.Name -ne 'SkrinshotUZ.exe' }
+            if ($other) { Write-Host "::warning::${rid}: .exe yonida qo'shimcha fayllar bor: $($other.Name -join ', ')" }
+
+            $mb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
+            Write-Host "${rid}: SkrinshotUZ.exe — $mb MB"
+            "- **${rid}**: SkrinshotUZ.exe — $mb MB" >> $env:GITHUB_STEP_SUMMARY
+          }
+
+      - name: Tutun testi (.exe ishga tushadimi, xotira < 40 MB)
+        run: |
+          foreach ($rid in 'win-x64', 'win-x86') {
+            $report = Join-Path $env:RUNNER_TEMP "smoke-$rid.txt"
+            $p = Start-Process "publish/$rid/SkrinshotUZ.exe" -ArgumentList '--smoke-test', '--smoke-report', "`"$report`"" -PassThru
+            $null = $p.Handle   # aks holda PowerShell ExitCode'ni yo'qotadi
+            if (-not $p.WaitForExit(90000)) { $p.Kill(); throw "${rid}: dastur 90 soniyada yopilmadi" }
+            if ($p.ExitCode -ne 0) {
+              if (Test-Path $report) { Get-Content $report | Write-Host }
+              throw "${rid}: chiqish kodi $($p.ExitCode)"
+            }
+            if (-not (Test-Path $report)) { throw "${rid}: hisobot fayli yozilmadi" }
+
+            $text = Get-Content $report -Raw
+            Write-Host "--- ${rid} ---"
+            Write-Host $text
+            if ($text -notmatch 'status=ok') { throw "${rid}: status=ok emas" }
+
+            $ws = [double]::Parse(([regex]::Match($text, 'workingSetMB=([\d.]+)')).Groups[1].Value, [cultureinfo]::InvariantCulture)
+            "- **${rid}** tutun testi o'tdi, ishchi xotira: $ws MB" >> $env:GITHUB_STEP_SUMMARY
+            if ($ws -ge 40) { Write-Host "::warning::${rid}: xotira $ws MB (maqsad < 40 MB)" }
+          }
+
+      - name: SkrinshotUZ.exe (64-bit) ni Artifacts'ga qo'yish
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkrinshotUZ-${{ steps.version.outputs.value }}-win-x64
+          path: publish/win-x64/SkrinshotUZ.exe
+          if-no-files-found: error
+
+      - name: SkrinshotUZ.exe (32-bit) ni Artifacts'ga qo'yish
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkrinshotUZ-${{ steps.version.outputs.value }}-win-x86
+          path: publish/win-x86/SkrinshotUZ.exe
+          if-no-files-found: error

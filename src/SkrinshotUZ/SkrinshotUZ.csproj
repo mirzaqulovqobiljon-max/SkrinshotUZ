@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Windows ilovasi (WinForms). Faqat Windows'da yig'iladi: CI — windows-latest. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>SkrinshotUZ</AssemblyName>
+    <RootNamespace>SkrinshotUZ</RootNamespace>
+    <AssemblyTitle>Skrinshot UZ</AssemblyTitle>
+    <Description>O'zbek maktablari uchun skrinshot dasturi</Description>
+
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!--
+      Per-Monitor DPI Aware v2. WinForms'da buni manifestda emas, shu xususiyat orqali yoqish tavsiya etiladi
+      (manifestdagi dpiAwareness WFAC010 ogohlantirishini beradi).
+    -->
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+    <ApplicationUseCompatibleTextRendering>false</ApplicationUseCompatibleTextRendering>
+
+    <!-- Kam xotira (<40 MB maqsad): fon GC oqimi o'chiriladi, workstation GC. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+
+    <!-- Bitta .exe ichiga faqat kerakli tillarning framework resurslari kiradi. -->
+    <SatelliteResourceLanguages>uz-Latn-UZ;uz-Cyrl-UZ;ru</SatelliteResourceLanguages>
+
+    <!-- Xatolik loglarida qator raqamlari bo'lsin, alohida .pdb fayl kerak bo'lmasin. -->
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\app.ico" LogicalName="SkrinshotUZ.app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SkrinshotUZ.Core\SkrinshotUZ.Core.csproj" />
+  </ItemGroup>
+
+</Project>
