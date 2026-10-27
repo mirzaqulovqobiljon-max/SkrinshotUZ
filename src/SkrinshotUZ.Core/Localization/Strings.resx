@@ -167,8 +167,8 @@ Xatolik haqida ma'lumot shu faylga yozildi:
     <comment>Overlay maslahati (soha hali yo'q)</comment>
   </data>
   <data name="Overlay_HintSelected" xml:space="preserve">
-    <value>Ramkani surish yoki burchagidan o'zgartirish mumkin   •   Enter yoki ikki marta bosish — nusxa olish   •   Esc — bekor qilish</value>
-    <comment>Overlay maslahati (soha tanlangan; 3-bosqich)</comment>
+    <value>Chizish uchun yondagi asbobni tanlang   •   Enter — nusxa olish   •   Esc — bekor qilish</value>
+    <comment>Overlay maslahati (soha tanlangan)</comment>
   </data>
   <data name="Capture_Copied" xml:space="preserve">
     <value>Skrinshot ({0} px) nusxa olindi. Uni Paint, Word yoki Telegram'ga Ctrl+V bilan qo'yishingiz mumkin.</value>
@@ -180,5 +180,86 @@ Xatolik haqida ma'lumot shu faylga yozildi:
   </data>
   <data name="Capture_ClipboardBusy" xml:space="preserve">
     <value>Buferga nusxa olib bo'lmadi — uni boshqa dastur band qilgan. Qayta urinib ko'ring.</value>
+  </data>
+  <data name="Tool_Pen" xml:space="preserve">
+    <value>Qalam (P)</value>
+  </data>
+  <data name="Tool_Line" xml:space="preserve">
+    <value>Chiziq (L)</value>
+  </data>
+  <data name="Tool_Arrow" xml:space="preserve">
+    <value>Strelka (A)</value>
+  </data>
+  <data name="Tool_Rectangle" xml:space="preserve">
+    <value>To'rtburchak (R)</value>
+  </data>
+  <data name="Tool_Marker" xml:space="preserve">
+    <value>Marker — matnni belgilash (M)</value>
+  </data>
+  <data name="Tool_Text" xml:space="preserve">
+    <value>Matn yozish (T)</value>
+  </data>
+  <data name="Toolbar_Color" xml:space="preserve">
+    <value>Rang</value>
+  </data>
+  <data name="Toolbar_MoreColors" xml:space="preserve">
+    <value>Boshqa rang…</value>
+  </data>
+  <data name="Toolbar_Thickness" xml:space="preserve">
+    <value>Qalinlik</value>
+  </data>
+  <data name="Toolbar_Undo" xml:space="preserve">
+    <value>Bekor qilish (Ctrl+Z)</value>
+  </data>
+  <data name="Toolbar_Redo" xml:space="preserve">
+    <value>Qaytarish (Ctrl+Y)</value>
+  </data>
+  <data name="Action_Copy" xml:space="preserve">
+    <value>Nusxa olish (Ctrl+C)</value>
+  </data>
+  <data name="Action_Save" xml:space="preserve">
+    <value>Saqlash (Ctrl+S) — keyingi bosqichda</value>
+  </data>
+  <data name="Action_Print" xml:space="preserve">
+    <value>Chop etish (Ctrl+P) — keyingi bosqichda</value>
+  </data>
+  <data name="Action_Close" xml:space="preserve">
+    <value>Yopish (Esc)</value>
+  </data>
+  <data name="Color_Red" xml:space="preserve">
+    <value>Qizil</value>
+  </data>
+  <data name="Color_Yellow" xml:space="preserve">
+    <value>Sariq</value>
+  </data>
+  <data name="Color_Green" xml:space="preserve">
+    <value>Yashil</value>
+  </data>
+  <data name="Color_Blue" xml:space="preserve">
+    <value>Ko'k</value>
+  </data>
+  <data name="Color_Orange" xml:space="preserve">
+    <value>To'q sariq</value>
+  </data>
+  <data name="Color_Purple" xml:space="preserve">
+    <value>Binafsha</value>
+  </data>
+  <data name="Color_Black" xml:space="preserve">
+    <value>Qora</value>
+  </data>
+  <data name="Color_White" xml:space="preserve">
+    <value>Oq</value>
+  </data>
+  <data name="Thickness_Thin" xml:space="preserve">
+    <value>Ingichka</value>
+  </data>
+  <data name="Thickness_Medium" xml:space="preserve">
+    <value>O'rtacha</value>
+  </data>
+  <data name="Thickness_Thick" xml:space="preserve">
+    <value>Qalin</value>
+  </data>
+  <data name="Thickness_ExtraThick" xml:space="preserve">
+    <value>Juda qalin</value>
   </data>
 </root>

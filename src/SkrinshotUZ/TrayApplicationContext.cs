@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using SkrinshotUZ.Capture;
 using SkrinshotUZ.Core.Capture;
+using SkrinshotUZ.Core.Editing;
 using SkrinshotUZ.Core.Hotkeys;
 using SkrinshotUZ.Core.Localization;
 using SkrinshotUZ.Core.Permissions;
@@ -10,6 +11,7 @@ using SkrinshotUZ.Core.Platform;
 using SkrinshotUZ.Core.Settings;
 using SkrinshotUZ.Core.Startup;
 using SkrinshotUZ.Core.Storage;
+using SkrinshotUZ.Editing;
 using SkrinshotUZ.Native;
 using SkrinshotUZ.UI;
 
@@ -245,7 +247,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             {
                 if (overlay.ShowDialog() == DialogResult.OK && overlay.Result is Rectangle selection)
                 {
-                    using var cropped = ScreenCapture.Crop(screen, selection);
+                    using var cropped = ImageComposer.Compose(screen, selection, overlay.Annotations);
                     if (CopyToClipboard(cropped))
                     {
                         ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.Capture_Copied, OverlayLayout.SizeText(cropped.Size)), ToolTipIcon.Info);
@@ -293,14 +295,22 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 Math.Min(200, layout.CanvasSize.Width),
                 Math.Min(100, layout.CanvasSize.Height));
 
+            // Soha ustiga qizil to'rtburchak chizamiz va u natija rasmida ham borligini tekshiramiz.
+            var mark = new RectangleAnnotation(Rectangle.Inflate(expected, -10, -10), Color.FromArgb(255, 0, 0), 4);
             using var overlay = new CaptureOverlayForm(layout, screen, null);
-            overlay.Shown += (_, _) => overlay.AcceptForTest(expected);
-            if (overlay.ShowDialog() != DialogResult.OK || overlay.Result is not Rectangle selection || selection != expected)
+            overlay.Shown += (_, _) => overlay.AcceptForTest(expected, new Annotation[] { mark });
+            if (overlay.ShowDialog() != DialogResult.OK || overlay.Result is not Rectangle selection || selection != expected
+                || overlay.Annotations.Count != 1)
             {
                 return "error: overlay natijasi kutilganidek emas";
             }
 
-            using var cropped = ScreenCapture.Crop(screen, selection);
+            using var cropped = ImageComposer.Compose(screen, selection, overlay.Annotations);
+            var edge = cropped.GetPixel(10, cropped.Height / 2); // to'rtburchakning chap cheti
+            if (edge.R < 200 || edge.G > 60 || edge.B > 60)
+            {
+                return "error: chizma natija rasmida yo'q (" + edge + ")";
+            }
             if (!CopyToClipboard(cropped))
             {
                 return "error: bufer band";
@@ -309,7 +319,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             using var fromClipboard = Clipboard.GetImage();
             string monitors = string.Join(";", layout.Monitors.Select(m => string.Create(CultureInfo.InvariantCulture, $"{m.Bounds.Width}x{m.Bounds.Height}@{m.Dpi}")));
             return fromClipboard is not null && fromClipboard.Size == cropped.Size
-                ? string.Create(CultureInfo.InvariantCulture, $"ok {cropped.Width}x{cropped.Height} canvas={layout.CanvasSize.Width}x{layout.CanvasSize.Height} monitors={monitors}")
+                ? string.Create(CultureInfo.InvariantCulture, $"ok {cropped.Width}x{cropped.Height} annotated canvas={layout.CanvasSize.Width}x{layout.CanvasSize.Height} monitors={monitors}")
                 : "error: buferdagi rasm o'lchami mos emas";
         }
         catch (Exception ex) when (ex is Win32Exception or ExternalException or ArgumentException or InvalidOperationException)

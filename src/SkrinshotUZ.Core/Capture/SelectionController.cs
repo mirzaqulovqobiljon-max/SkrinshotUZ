@@ -97,6 +97,12 @@ public sealed class SelectionController
     /// <summary>Joriy soha (holat <see cref="SelectionState.Empty"/> bo'lsa — <see cref="Rectangle.Empty"/>).</summary>
     public Rectangle Selection => HasSelection ? _selection : Rectangle.Empty;
 
+    /// <summary>
+    /// Soha tashqarisiga bosilganda yangi soha boshlansinmi. Soha ustida chizma bo'lsa — <c>false</c>
+    /// (tasodifiy bosish chizmalarni "yo'qotib" qo'ymasligi uchun); surish va o'zgartirish ishlayveradi.
+    /// </summary>
+    public bool CanStartNew { get; set; } = true;
+
     /// <summary>Sichqoncha tugmasi bosilganmi (sudrash davom etmoqda).</summary>
     public bool IsDragging => State is SelectionState.Creating or SelectionState.Moving or SelectionState.Resizing;
 
@@ -169,7 +175,7 @@ public sealed class SelectionController
             ActiveHandle = handle;
             _original = _selection;
         }
-        else
+        else if (CanStartNew || State == SelectionState.Empty)
         {
             State = SelectionState.Creating;
             ActiveHandle = SelectionHandle.None;
