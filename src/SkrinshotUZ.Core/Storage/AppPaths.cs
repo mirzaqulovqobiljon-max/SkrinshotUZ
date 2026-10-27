@@ -15,6 +15,15 @@ public static class AppPaths
         return Path.Combine(localAppData, AppFolderName, "logs");
     }
 
+    /// <summary>Sozlamalar fayli: <c>%APPDATA%\Skrinshot UZ\settings.json</c>.</summary>
+    /// <param name="appData">ApplicationData (Roaming) papkasi.</param>
+    /// <returns>To'liq yo'l.</returns>
+    public static string SettingsFile(string appData)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appData);
+        return Path.Combine(appData, AppFolderName, "settings.json");
+    }
+
     /// <summary>Skrinshotlar uchun standart papka: <c>Rasmlar\Skrinshot UZ</c>.</summary>
     /// <param name="myPictures">Foydalanuvchining "Rasmlar" (My Pictures) papkasi.</param>
     /// <returns>To'liq yo'l.</returns>

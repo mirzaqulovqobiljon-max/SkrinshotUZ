@@ -17,6 +17,13 @@ public class AppPathsTests
     }
 
     [Fact]
+    public void SettingsFile_IsInsideRoamingAppData()
+    {
+        Assert.Equal(Path.Combine(@"C:\Users\Ustoz\AppData\Roaming", "Skrinshot UZ", "settings.json"), AppPaths.SettingsFile(@"C:\Users\Ustoz\AppData\Roaming"));
+        Assert.Throws<ArgumentException>(() => AppPaths.SettingsFile(" "));
+    }
+
+    [Fact]
     public void CrashLogFileName_UsesInvariantTimestamp()
     {
         Assert.Equal("xato_2026-10-27_20-38-15.log", AppPaths.CrashLogFileName(new DateTime(2026, 10, 27, 20, 38, 15)));

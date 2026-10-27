@@ -5,9 +5,9 @@ using System.Text;
 namespace SkrinshotUZ;
 
 /// <summary>
-/// CI uchun "tutun testi" (<c>--smoke-test</c>): haqiqiy tray holati ishga tushadi, 3 soniya ishlaydi,
-/// keyin xotira sarfini faylga yozib, o'zi yopiladi. Shu orqali har bir build'da
-/// .exe haqiqatan ishga tushishi va xotira talabi (&lt;40 MB) tekshiriladi.
+/// CI uchun "tutun testi" (<c>--smoke-test</c>): haqiqiy tray holati ishga tushadi (tugmalar ro'yxatdan o'tadi,
+/// klaviatura hook'i o'rnatiladi), 3 soniya ishlaydi, keyin xotira sarfi va tugmalar holatini faylga yozib,
+/// o'zi yopiladi. Hech qanday oyna chiqmaydi, sozlamalar va reyestr o'zgarmaydi.
 /// </summary>
 internal static class SmokeTest
 {
@@ -16,20 +16,20 @@ internal static class SmokeTest
     /// <summary>Taymerni ulaydi.</summary>
     /// <param name="context">Ilova holati.</param>
     /// <param name="reportPath">Hisobot fayli (ixtiyoriy).</param>
-    public static void Attach(ApplicationContext context, string? reportPath)
+    public static void Attach(TrayApplicationContext context, string? reportPath)
     {
         var timer = new System.Windows.Forms.Timer { Interval = RunMilliseconds };
         timer.Tick += (_, _) =>
         {
             timer.Stop();
             timer.Dispose();
-            WriteReport(reportPath);
+            WriteReport(reportPath, context.DiagnosticLines);
             context.ExitThread();
         };
         timer.Start();
     }
 
-    private static void WriteReport(string? reportPath)
+    private static void WriteReport(string? reportPath, IEnumerable<string> extraLines)
     {
         if (reportPath is null)
         {
@@ -43,9 +43,15 @@ internal static class SmokeTest
 
         using var process = Process.GetCurrentProcess();
         process.Refresh();
-        string text = string.Create(
-            CultureInfo.InvariantCulture,
-            $"status=ok{Environment.NewLine}workingSetMB={process.WorkingSet64 / 1048576.0:F1}{Environment.NewLine}privateMB={process.PrivateMemorySize64 / 1048576.0:F1}{Environment.NewLine}");
-        File.WriteAllText(reportPath, text, Encoding.UTF8);
+        var sb = new StringBuilder();
+        sb.AppendLine("status=ok");
+        sb.AppendLine(string.Create(CultureInfo.InvariantCulture, $"workingSetMB={process.WorkingSet64 / 1048576.0:F1}"));
+        sb.AppendLine(string.Create(CultureInfo.InvariantCulture, $"privateMB={process.PrivateMemorySize64 / 1048576.0:F1}"));
+        foreach (string line in extraLines)
+        {
+            sb.AppendLine(line);
+        }
+
+        File.WriteAllText(reportPath, sb.ToString(), Encoding.UTF8);
     }
 }

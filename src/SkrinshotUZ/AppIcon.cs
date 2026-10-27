@@ -10,7 +10,13 @@ internal static class AppIcon
     /// shuning uchun ikonka xira ko'rinmaydi.
     /// </summary>
     /// <returns>Yangi <see cref="Icon"/> (chaqiruvchi dispose qiladi).</returns>
-    public static Icon LoadSmall()
+    public static Icon LoadSmall() => Load(SystemInformation.SmallIconSize);
+
+    /// <summary>Oynalar uchun katta ikonka (100% da 32 px).</summary>
+    /// <returns>Yangi <see cref="Icon"/> (chaqiruvchi dispose qiladi).</returns>
+    public static Icon LoadLarge() => Load(SystemInformation.IconSize);
+
+    private static Icon Load(Size size)
     {
         using Stream? stream = typeof(AppIcon).Assembly.GetManifestResourceStream(ResourceName);
         if (stream is null)
@@ -19,6 +25,6 @@ internal static class AppIcon
             return (Icon)SystemIcons.Application.Clone();
         }
 
-        return new Icon(stream, SystemInformation.SmallIconSize);
+        return new Icon(stream, size);
     }
 }

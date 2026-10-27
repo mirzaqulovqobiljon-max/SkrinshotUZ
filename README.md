@@ -2,7 +2,7 @@
 
 O'zbek maktablari uchun Windows skrinshot dasturi (Lightshot analogi). To'liq oflayn — hech qanday rasm internetga yuklanmaydi.
 
-> Holat: **1-bosqich** — loyiha tuzilmasi, chop etish maketi hisoblari, testlar, CI. To'liq qo'llanma 7-bosqichda yoziladi.
+> Holat: **2-bosqich** — tray ikonka, PrintScreen ruxsat oynasi, tugmalar (RegisterHotKey + zaxira hook), Qirqish vositasi sozlamasi, avtoishga tushirish. Skrinshot olishning o'zi 3-bosqichda. To'liq qo'llanma 7-bosqichda yoziladi.
 
 ## Tuzilma
 
@@ -12,8 +12,12 @@ SkrinshotUZ.sln
 │  ├─ Printing/                   A4 to'liq, A4 yarmi, asl o'lcham, ko'p varaqqa bo'lish (mm)
 │  ├─ Storage/                    fayl nomlari, papkalar
 │  ├─ Startup/                    buyruq qatori parametrlari
+│  ├─ Hotkeys/                    tugmalar: IHotkeyService, hook filtri, HotkeyManager
+│  ├─ Permissions/                ruxsat oqimi (PrintScreen, Qirqish vositasi, avtoishga tushirish)
+│  ├─ Platform/                   reyestr sozlamalari (faqat HKCU)
+│  ├─ Settings/                   settings.json
 │  └─ Localization/Strings.resx   interfeys matnlari (o'zbek, lotin)
-├─ src/SkrinshotUZ/               WinForms ilova (tray, keyin: PrintScreen, tahrirlash, chop etish)
+├─ src/SkrinshotUZ/               WinForms ilova: tray, TaskDialog oynalari, WinAPI (Native/)
 ├─ tests/SkrinshotUZ.Core.Tests/  xUnit testlar
 └─ .github/workflows/build.yml    Windows'da build → test → .exe (x64, x86) → tutun testi
 ```

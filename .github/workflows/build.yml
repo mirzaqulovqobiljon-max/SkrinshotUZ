@@ -106,8 +106,13 @@ jobs:
             Write-Host $text
             if ($text -notmatch 'status=ok') { throw "${rid}: status=ok emas" }
 
+            # Tugmalar boshqaruvi haqiqiy Windows'da ishga tushganini tasdiqlash (4 ta birikma hisobotda bo'lishi shart).
+            $hotkeys = [regex]::Matches($text, '(?m)^hotkey\.(.+)=(\w+)\r?$')
+            if ($hotkeys.Count -ne 4) { throw "${rid}: 4 ta tugma holati kutilgan, topildi: $($hotkeys.Count)" }
+
             $ws = [double]::Parse(([regex]::Match($text, 'workingSetMB=([\d.]+)')).Groups[1].Value, [cultureinfo]::InvariantCulture)
             "- **${rid}** tutun testi o'tdi, ishchi xotira: $ws MB" >> $env:GITHUB_STEP_SUMMARY
+            foreach ($h in $hotkeys) { "  - $($h.Groups[1].Value): $($h.Groups[2].Value)" >> $env:GITHUB_STEP_SUMMARY }
             if ($ws -ge 40) { Write-Host "::warning::${rid}: xotira $ws MB (maqsad < 40 MB)" }
           }
 

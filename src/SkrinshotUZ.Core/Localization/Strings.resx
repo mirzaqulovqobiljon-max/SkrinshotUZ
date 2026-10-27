@@ -10,27 +10,146 @@
   </data>
   <data name="Tray_Tooltip" xml:space="preserve">
     <value>Skrinshot UZ — PrintScreen yoki Ctrl+Shift+S</value>
-    <comment>Tray ikonka ustidagi matn (63 belgidan oshmasin)</comment>
+    <comment>Tray ikonka matni (63 belgidan oshmasin)</comment>
   </data>
   <data name="Tray_Started" xml:space="preserve">
     <value>Skrinshot UZ ishga tushdi. Ikonkasi ekranning pastki o'ng burchagida.</value>
-    <comment>Ishga tushganda chiqadigan xabar</comment>
+  </data>
+  <data name="Tray_AlreadyRunning" xml:space="preserve">
+    <value>Skrinshot UZ allaqachon ishlayapti. Ikonkasi ekranning pastki o'ng burchagida, soat yonida.</value>
+    <comment>Dastur ikkinchi marta ochilganda</comment>
+  </data>
+  <data name="Menu_Capture" xml:space="preserve">
+    <value>Skrinshot olish</value>
+    <comment>Tray menyusi</comment>
+  </data>
+  <data name="Menu_PrintScreen" xml:space="preserve">
+    <value>PrintScreen tugmasidan foydalanish</value>
+  </data>
+  <data name="Menu_Autostart" xml:space="preserve">
+    <value>Windows bilan birga ishga tushirish</value>
+  </data>
+  <data name="Menu_SnippingTool" xml:space="preserve">
+    <value>PrintScreen'ni Qirqish vositasi egallagan…</value>
+  </data>
+  <data name="Menu_HotkeyStatus" xml:space="preserve">
+    <value>Tugmalar holati</value>
   </data>
   <data name="Menu_Exit" xml:space="preserve">
     <value>Chiqish</value>
-    <comment>Tray menyusi</comment>
+  </data>
+  <data name="Permission_Title" xml:space="preserve">
+    <value>Skrinshot UZ — PrintScreen tugmasi</value>
+    <comment>Oyna sarlavhasi</comment>
   </data>
   <data name="Permission_PrintScreen_Question" xml:space="preserve">
     <value>Skrinshot UZ klaviaturadagi PrintScreen tugmasini ishlatishiga ruxsat berasizmi?</value>
-    <comment>Birinchi ishga tushishdagi savol (vazifadagi aniq matn)</comment>
+    <comment>Vazifadagi aniq matn</comment>
+  </data>
+  <data name="Permission_Explanation" xml:space="preserve">
+    <value>Ruxsat bersangiz, PrintScreen bosilganda ekran xiralashadi va kerakli qismni sichqoncha bilan tanlab olasiz.
+
+Alt+PrintScreen — faol oyna skrinshoti.
+Shift+PrintScreen — butun ekran darhol saqlanadi.
+
+Bu tanlovni keyin istalgan vaqtda soat yonidagi ikonka menyusidan o'zgartirish mumkin.</value>
   </data>
   <data name="Permission_Allow" xml:space="preserve">
     <value>Ruxsat berish</value>
     <comment>Tugma</comment>
   </data>
+  <data name="Permission_Allow_Note" xml:space="preserve">
+    <value>PrintScreen tugmasi Skrinshot UZ'ni ochadi</value>
+    <comment>Tugma izohi</comment>
+  </data>
   <data name="Permission_Deny" xml:space="preserve">
     <value>Yo'q</value>
     <comment>Tugma</comment>
+  </data>
+  <data name="Permission_Deny_Note" xml:space="preserve">
+    <value>Dastur faqat ikonka va Ctrl+Shift+S orqali ishlaydi</value>
+    <comment>Tugma izohi</comment>
+  </data>
+  <data name="Permission_Autostart" xml:space="preserve">
+    <value>Kompyuter yoqilganda Skrinshot UZ avtomatik ishga tushsin</value>
+    <comment>Belgi (standart — belgilanmagan)</comment>
+  </data>
+  <data name="Snipping_Title" xml:space="preserve">
+    <value>Skrinshot UZ — Qirqish vositasi</value>
+  </data>
+  <data name="Snipping_Heading" xml:space="preserve">
+    <value>PrintScreen tugmasini hozir Windows'ning Qirqish vositasi (Snipping Tool) egallagan</value>
+  </data>
+  <data name="Snipping_Text" xml:space="preserve">
+    <value>Windows sozlamalarida «PrintScreen tugmasi bilan Qirqish vositasini ochish» yoqilgan. Shu sababli PrintScreen bosilganda Skrinshot UZ o'rniga yoki u bilan birga Qirqish vositasi ochilishi mumkin.
+
+Skrinshot UZ bu sozlamani faqat sizning akkauntingiz uchun o'chirishi mumkin. Uni istalgan vaqtda qayta yoqish mumkin: Windows Sozlamalari → Maxsus imkoniyatlar → Klaviatura.</value>
+  </data>
+  <data name="Snipping_Disable" xml:space="preserve">
+    <value>Ha, o'chirish</value>
+    <comment>Tugma</comment>
+  </data>
+  <data name="Snipping_Disable_Note" xml:space="preserve">
+    <value>PrintScreen faqat Skrinshot UZ'ni ochadi</value>
+  </data>
+  <data name="Snipping_Keep" xml:space="preserve">
+    <value>Yo'q, o'zgartirmaslik</value>
+    <comment>Tugma</comment>
+  </data>
+  <data name="Snipping_Keep_Note" xml:space="preserve">
+    <value>Windows sozlamasi o'zgarmaydi; Skrinshot UZ baribir PrintScreen'ni ushlashga harakat qiladi</value>
+  </data>
+  <data name="Snipping_Done" xml:space="preserve">
+    <value>Sozlama o'chirildi. Agar PrintScreen bosilganda Qirqish vositasi hali ham ochilsa, kompyuterni qayta ishga tushiring.</value>
+  </data>
+  <data name="Snipping_Restore_Question" xml:space="preserve">
+    <value>Skrinshot UZ ilgari Qirqish vositasining PrintScreen sozlamasini o'chirgan edi. Uni qayta yoqaymi?</value>
+  </data>
+  <data name="Snipping_Restore_Yes" xml:space="preserve">
+    <value>Ha, qayta yoqish</value>
+    <comment>Tugma</comment>
+  </data>
+  <data name="Snipping_Restore_No" xml:space="preserve">
+    <value>Yo'q, shunday qolsin</value>
+    <comment>Tugma</comment>
+  </data>
+  <data name="Action_CaptureRegion" xml:space="preserve">
+    <value>Soha tanlash</value>
+  </data>
+  <data name="Action_CaptureActiveWindow" xml:space="preserve">
+    <value>Faol oyna skrinshoti</value>
+  </data>
+  <data name="Action_CaptureFullScreenSave" xml:space="preserve">
+    <value>Butun ekranni darhol saqlash</value>
+  </data>
+  <data name="HotkeyMode_RegisterHotKey" xml:space="preserve">
+    <value>ishlayapti</value>
+  </data>
+  <data name="HotkeyMode_KeyboardHook" xml:space="preserve">
+    <value>ishlayapti (zaxira usul — tugmani boshqa dastur ham ishlatmoqchi)</value>
+  </data>
+  <data name="HotkeyMode_Failed" xml:space="preserve">
+    <value>ishlamayapti — tugmani boshqa dastur egallagan</value>
+  </data>
+  <data name="HotkeyStatus_Title" xml:space="preserve">
+    <value>Klaviatura tugmalari holati</value>
+  </data>
+  <data name="HotkeyStatus_PrintScreenNotAllowed" xml:space="preserve">
+    <value>ruxsat berilmagan (menyudan yoqish mumkin)</value>
+  </data>
+  <data name="Placeholder_ActionTriggered" xml:space="preserve">
+    <value>«{0}» ({1}) qabul qilindi. Bu funksiya keyingi bosqichda qo'shiladi.</value>
+    <comment>{0} — amal, {1} — tugma. Vaqtinchalik (2-bosqich)</comment>
+  </data>
+  <data name="Warning_HotkeysFailed" xml:space="preserve">
+    <value>Diqqat: {0} tugmasini boshqa dastur egallagan. Skrinshot olish uchun soat yonidagi ikonkani bosing.</value>
+    <comment>{0} — tugmalar ro'yxati</comment>
+  </data>
+  <data name="Warning_SystemSettingDenied" xml:space="preserve">
+    <value>Windows sozlamasini o'zgartirib bo'lmadi. Ehtimol, kompyuter administratori buni cheklagan.</value>
+  </data>
+  <data name="Warning_SettingsNotSaved" xml:space="preserve">
+    <value>Sozlamalarni saqlab bo'lmadi. Dastur ishlayveradi, lekin keyingi safar tanlovingiz yana so'ralishi mumkin.</value>
   </data>
   <data name="Crash_Message" xml:space="preserve">
     <value>Kutilmagan xatolik yuz berdi va dastur yopiladi.
@@ -38,5 +157,9 @@
 Xatolik haqida ma'lumot shu faylga yozildi:
 {0}</value>
     <comment>{0} — log fayl yo'li</comment>
+  </data>
+  <data name="Source_TrayIcon" xml:space="preserve">
+    <value>ikonka menyusi</value>
+    <comment>Placeholder_ActionTriggered uchun {1}: buyruq tray ikonkadan berilgan</comment>
   </data>
 </root>
