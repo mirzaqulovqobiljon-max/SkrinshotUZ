@@ -59,11 +59,23 @@ jobs:
           dotnet test SkrinshotUZ.sln -c Release --no-build `
             --logger "trx;LogFileName=test-results.trx" `
             --logger "console;verbosity=normal" `
-            --results-directory TestResults | Tee-Object -FilePath test-output.txt
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $summary = (Select-String -Path test-output.txt -Pattern '(Passed|Failed)!.*' | Select-Object -Last 1).Matches[0].Value
+            --results-directory TestResults
+          $testExit = $LASTEXITCODE
+
+          # Natijani trx fayldan o'qiymiz va annotatsiya sifatida chiqaramiz (log yuklab olmasdan ko'rinadi).
+          $trx = Get-ChildItem TestResults -Recurse -Filter *.trx | Select-Object -First 1
+          if (-not $trx) { Write-Host "::error title=Unit testlar::trx fayl topilmadi (chiqish kodi $testExit)"; exit 1 }
+          [xml]$x = Get-Content $trx.FullName
+          $c = $x.TestRun.ResultSummary.Counters
+          $summary = "jami $($c.total), o'tdi $($c.passed), yiqildi $($c.failed)"
+          foreach ($r in $x.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -ne 'Passed' }) {
+            $msg = ($r.Output.ErrorInfo.Message -replace '\r?\n', ' ').Trim()
+            if ($msg.Length -gt 600) { $msg = $msg.Substring(0, 600) }
+            Write-Host "::error title=Yiqilgan test::$($r.testName) — $msg"
+          }
           Write-Host "::notice title=Unit testlar::$summary"
           "**Unit testlar:** $summary" >> $env:GITHUB_STEP_SUMMARY
+          exit $testExit
 
       - name: Test natijalarini saqlash
         if: always()
