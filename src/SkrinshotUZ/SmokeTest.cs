@@ -6,7 +6,7 @@ namespace SkrinshotUZ;
 
 /// <summary>
 /// CI uchun "tutun testi" (<c>--smoke-test</c>): haqiqiy tray holati ishga tushadi (tugmalar ro'yxatdan o'tadi,
-/// klaviatura hook'i o'rnatiladi), 3 soniya ishlaydi, keyin xotira sarfi va tugmalar holatini faylga yozib,
+/// klaviatura hook'i o'rnatiladi, xotira bo'shatiladi), 3 soniya ishlaydi, keyin xotira sarfi va tugmalar holatini faylga yozib,
 /// o'zi yopiladi. Hech qanday oyna chiqmaydi, sozlamalar va reyestr o'zgarmaydi.
 /// </summary>
 internal static class SmokeTest
@@ -36,17 +36,15 @@ internal static class SmokeTest
             return;
         }
 
-        // Tray'da kutib turgan holatdagi barqaror xotira (vaqtinchalik obyektlarsiz).
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-
+        // Xotira haqiqiy holatdagidek o'lchanadi: dastur ishga tushgach o'zi xotirani bo'shatgan,
+        // so'ng 3 soniya tray'da ishlagan. Bu yerda qo'shimcha tozalash QILINMAYDI.
         using var process = Process.GetCurrentProcess();
         process.Refresh();
         var sb = new StringBuilder();
         sb.AppendLine("status=ok");
         sb.AppendLine(string.Create(CultureInfo.InvariantCulture, $"workingSetMB={process.WorkingSet64 / 1048576.0:F1}"));
         sb.AppendLine(string.Create(CultureInfo.InvariantCulture, $"privateMB={process.PrivateMemorySize64 / 1048576.0:F1}"));
+        sb.AppendLine(string.Create(CultureInfo.InvariantCulture, $"peakWorkingSetMB={process.PeakWorkingSet64 / 1048576.0:F1}"));
         foreach (string line in extraLines)
         {
             sb.AppendLine(line);

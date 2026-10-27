@@ -33,10 +33,10 @@ jobs:
 
     steps:
       - name: Kodni olish
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: .NET 8 SDK o'rnatish
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
 
@@ -55,15 +55,19 @@ jobs:
         run: dotnet build SkrinshotUZ.sln -c Release --no-restore -warnaserror -p:Version=${{ steps.version.outputs.value }}
 
       - name: Unit testlar
-        run: >
-          dotnet test SkrinshotUZ.sln -c Release --no-build
-          --logger "trx;LogFileName=test-results.trx"
-          --logger "console;verbosity=normal"
-          --results-directory TestResults
+        run: |
+          dotnet test SkrinshotUZ.sln -c Release --no-build `
+            --logger "trx;LogFileName=test-results.trx" `
+            --logger "console;verbosity=normal" `
+            --results-directory TestResults | Tee-Object -FilePath test-output.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $summary = (Select-String -Path test-output.txt -Pattern '(Passed|Failed)!.*' | Select-Object -Last 1).Matches[0].Value
+          Write-Host "::notice title=Unit testlar::$summary"
+          "**Unit testlar:** $summary" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Test natijalarini saqlash
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-natijalari
           path: TestResults/**/*.trx
@@ -80,11 +84,12 @@ jobs:
             $exe = "publish/$rid/SkrinshotUZ.exe"
             if (-not (Test-Path $exe)) { throw "${rid}: $exe topilmadi" }
 
+            # Talab: natija — faqat bitta .exe.
             $other = Get-ChildItem "publish/$rid" -File | Where-Object { $_.Name -ne 'SkrinshotUZ.exe' }
-            if ($other) { Write-Host "::warning::${rid}: .exe yonida qo'shimcha fayllar bor: $($other.Name -join ', ')" }
+            if ($other) { throw "${rid}: .exe yonida qo'shimcha fayllar bor: $($other.Name -join ', ')" }
 
             $mb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
-            Write-Host "${rid}: SkrinshotUZ.exe — $mb MB"
+            Write-Host "::notice title=${rid} .exe hajmi::SkrinshotUZ.exe — $mb MB"
             "- **${rid}**: SkrinshotUZ.exe — $mb MB" >> $env:GITHUB_STEP_SUMMARY
           }
 
@@ -110,21 +115,27 @@ jobs:
             $hotkeys = [regex]::Matches($text, '(?m)^hotkey\.(.+)=(\w+)\r?$')
             if ($hotkeys.Count -ne 4) { throw "${rid}: 4 ta tugma holati kutilgan, topildi: $($hotkeys.Count)" }
 
-            $ws = [double]::Parse(([regex]::Match($text, 'workingSetMB=([\d.]+)')).Groups[1].Value, [cultureinfo]::InvariantCulture)
-            "- **${rid}** tutun testi o'tdi, ishchi xotira: $ws MB" >> $env:GITHUB_STEP_SUMMARY
-            foreach ($h in $hotkeys) { "  - $($h.Groups[1].Value): $($h.Groups[2].Value)" >> $env:GITHUB_STEP_SUMMARY }
+            function Get-Mb($name) { [double]::Parse(([regex]::Match($text, "$name=([\d.]+)")).Groups[1].Value, [cultureinfo]::InvariantCulture) }
+            $ws = Get-Mb 'workingSetMB'
+            $priv = Get-Mb 'privateMB'
+            $peak = Get-Mb 'peakWorkingSetMB'
+            $keys = ($hotkeys | ForEach-Object { "$($_.Groups[1].Value)=$($_.Groups[2].Value)" }) -join ', '
+
+            Write-Host "::notice title=${rid} xotira::ishchi xotira $ws MB, shaxsiy $priv MB, eng yuqori $peak MB"
+            Write-Host "::notice title=${rid} tugmalar::$keys"
+            "- **${rid}** tutun testi o'tdi — ishchi xotira: $ws MB, shaxsiy: $priv MB, eng yuqori: $peak MB; tugmalar: $keys" >> $env:GITHUB_STEP_SUMMARY
             if ($ws -ge 40) { Write-Host "::warning::${rid}: xotira $ws MB (maqsad < 40 MB)" }
           }
 
       - name: SkrinshotUZ.exe (64-bit) ni Artifacts'ga qo'yish
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: SkrinshotUZ-${{ steps.version.outputs.value }}-win-x64
           path: publish/win-x64/SkrinshotUZ.exe
           if-no-files-found: error
 
       - name: SkrinshotUZ.exe (32-bit) ni Artifacts'ga qo'yish
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: SkrinshotUZ-${{ steps.version.outputs.value }}-win-x86
           path: publish/win-x86/SkrinshotUZ.exe

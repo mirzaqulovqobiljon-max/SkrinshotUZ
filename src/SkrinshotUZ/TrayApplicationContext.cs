@@ -137,6 +137,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             // CI: hech qanday oyna yo'q, foydalanuvchi sozlamalari va reyestr o'zgarmaydi —
             // faqat tugmalarni ro'yxatdan o'tkazish mexanizmi haqiqiy Windows'da tekshiriladi.
             _hotkeys.Apply(printScreenAllowed: true);
+            MemoryTrimmer.Trim();
             return;
         }
 
@@ -156,6 +157,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             ShowBalloon(Strings.Tray_Started, ToolTipIcon.Info);
         }
+
+        // Ishga tushish tugadi — endi dastur tray'da jim kutadi.
+        MemoryTrimmer.Trim();
     }
 
     private void ApplyHotkeys()
@@ -247,6 +251,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         finally
         {
             _dialogOpen = false;
+            MemoryTrimmer.Trim(); // oyna resurslari endi kerak emas
         }
     }
 

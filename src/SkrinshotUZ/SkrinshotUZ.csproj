@@ -28,9 +28,18 @@
     <!-- Bitta .exe ichiga faqat kerakli tillarning framework resurslari kiradi. -->
     <SatelliteResourceLanguages>uz-Latn-UZ;uz-Cyrl-UZ;ru</SatelliteResourceLanguages>
 
-    <!-- Xatolik loglarida qator raqamlari bo'lsin, alohida .pdb fayl kerak bo'lmasin. -->
-    <DebugType>embedded</DebugType>
+    <!-- Natija — faqat bitta .exe: kutubxonalarning .xml hujjatlari nashr qilinmaydi. -->
+    <PublishDocumentationFile>false</PublishDocumentationFile>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Til/sana jadvallari uchun alohida ICU kutubxonasi (icu.dll) o'rniga Windows'ning o'zidagi NLS ishlatiladi:
+      bir necha MB xotira tejaladi. Windows 10/11 da natija bir xil.
+    -->
+    <RuntimeHostConfigurationOption Include="System.Globalization.UseNls" Value="true" />
+  </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\app.ico" LogicalName="SkrinshotUZ.app.ico" />

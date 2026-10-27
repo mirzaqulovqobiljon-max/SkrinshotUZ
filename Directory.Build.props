@@ -9,6 +9,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
+    <!-- Xatolik loglarida qator raqamlari bo'lsin, lekin alohida .pdb fayllar chiqmasin (natija — bitta .exe). -->
+    <DebugType>embedded</DebugType>
 
     <!-- Versiya CI'da -p:Version=... orqali almashtiriladi -->
     <Version>0.1.0</Version>
