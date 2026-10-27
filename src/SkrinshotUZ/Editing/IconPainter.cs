@@ -140,7 +140,8 @@ internal static class IconPainter
     private static void DrawVector(Graphics g, ToolbarIcon icon, int size)
     {
         float s = size;
-        float w = Math.Max(1.2f, s / 13f);
+        // Qiya chiziq antialiasing tufayli xiraroq ko'rinadi — glif'lar bilan bir xil "og'irlik" uchun biroz qalinroq.
+        float w = Math.Max(1.6f, s / 11f);
         using var pen = new Pen(Ink, w) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
         PointF P(float x, float y) => new(x * s, y * s);
 
