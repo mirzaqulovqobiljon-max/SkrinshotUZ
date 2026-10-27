@@ -59,8 +59,14 @@ jobs:
           dotnet test SkrinshotUZ.sln -c Release --no-build `
             --logger "trx" `
             --logger "console;verbosity=normal" `
-            --results-directory TestResults
+            --results-directory TestResults 2>&1 | Tee-Object -FilePath test-output.txt
           $testExit = $LASTEXITCODE
+
+          # Test jarayoni yiqilsa (trx bo'lmasligi mumkin) — chiqishning oxirini annotatsiyaga chiqaramiz.
+          if ($testExit -ne 0) {
+            $tail = (Get-Content test-output.txt | Where-Object { $_.Trim() } | Select-Object -Last 25) -join '%0A'
+            Write-Host "::error title=dotnet test chiqishi (oxiri)::$tail"
+          }
 
           # Natijani trx fayllardan (har bir test loyihasi alohida) o'qiymiz va annotatsiya sifatida chiqaramiz.
           $trxFiles = @(Get-ChildItem TestResults -Recurse -Filter *.trx)
