@@ -92,7 +92,7 @@ public class ToolbarTests
         var buttons = bars.Tools.Items.OfType<ToolStripButton>().ToList();
         Assert.True(buttons.Single(b => b.ToolTipText == EditorUi.ToolName(EditorTool.Rectangle)).Checked);
         Assert.False(buttons.Single(b => b.ToolTipText == EditorUi.ToolName(EditorTool.Pen)).Checked);
-        Assert.False(buttons.Single(b => b.ToolTipText.StartsWith("Bekor", StringComparison.Ordinal)).Enabled);
-        Assert.True(buttons.Single(b => b.ToolTipText.StartsWith("Qaytarish", StringComparison.Ordinal)).Enabled);
+        Assert.False(buttons.Single(b => b.ToolTipText?.StartsWith("Bekor", StringComparison.Ordinal) == true).Enabled);
+        Assert.True(buttons.Single(b => b.ToolTipText?.StartsWith("Qaytarish", StringComparison.Ordinal) == true).Enabled);
     }
 }
