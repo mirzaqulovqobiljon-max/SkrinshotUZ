@@ -9,8 +9,8 @@ namespace SkrinshotUZ.Editing;
 /// </summary>
 internal sealed class EditorToolbars : IDisposable
 {
-    private const int BaseButton = 40;   // 100% da tugma o'lchami, px
-    private const int BaseIcon = 24;
+    private const int BaseButton = 32;   // 100% da tugma o'lchami, px
+    private const int BaseIcon = 18;
 
     private readonly Dictionary<EditorTool, ToolStripButton> _toolButtons = new();
     private readonly ToolStripDropDownButton _colorButton;
@@ -154,7 +154,7 @@ internal sealed class EditorToolbars : IDisposable
         foreach (var strip in new[] { Tools, Actions })
         {
             strip.ImageScalingSize = new Size(icon, icon);
-            strip.Padding = new Padding((int)Math.Round(3 * scale));
+            strip.Padding = new Padding((int)Math.Round(2 * scale));
         }
 
         UpdateSwatches();

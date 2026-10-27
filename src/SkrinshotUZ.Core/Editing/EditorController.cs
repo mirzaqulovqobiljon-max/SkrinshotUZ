@@ -62,6 +62,11 @@ public sealed class EditorController
     private Point _start;
     private float _width;
 
+    private int _selected = -1;
+    private AnnotationHandle _editHandle;
+    private Annotation? _editOriginal;
+    private Point _editStart;
+
     /// <summary>Yangi boshqaruvchi.</summary>
     /// <param name="history">Tarix (chizmalar shu yerga yoziladi).</param>
     public EditorController(AnnotationHistory history)
@@ -76,6 +81,7 @@ public sealed class EditorController
         set
         {
             CancelDrawing();
+            Deselect();
             _tool = value;
         }
     }
@@ -91,6 +97,18 @@ public sealed class EditorController
 
     /// <summary>Chizilayotgan shakl (ko'rsatish uchun) — chizilmayotgan bo'lsa <c>null</c>.</summary>
     public Annotation? Preview { get; private set; }
+
+    /// <summary>Tanlangan chizma o'rni (tanlanmagan bo'lsa −1). Yangi chizilgan shakl darhol tanlanadi.</summary>
+    public int SelectedIndex => _selected >= 0 && _selected < _history.Count ? _selected : -1;
+
+    /// <summary>Tanlangan chizma (tutqichlari ko'rsatiladi).</summary>
+    public Annotation? Selected => SelectedIndex >= 0 ? _history.Items[SelectedIndex] : null;
+
+    /// <summary>Tanlangan chizma sichqoncha bilan siljitilmoqda yoki cho'zilmoqda.</summary>
+    public bool IsEditing { get; private set; }
+
+    /// <summary>Tahrirlanayotgan chizmaning joriy ko'rinishi (tarixga hali yozilmagan).</summary>
+    public Annotation? EditPreview { get; private set; }
 
     /// <summary>Chiziq qalinligi, px.</summary>
     /// <param name="thickness">Daraja.</param>
@@ -168,7 +186,153 @@ public sealed class EditorController
         }
 
         _history.Add(result);
+        _selected = _history.Count - 1; // darhol tanlangan — uchlarini to'g'rilash mumkin
         return result;
+    }
+
+    /// <summary>
+    /// Nuqta qaysi chizmaga tushadi. Avval tanlangan chizma (tutqichlari bilan), keyin — eng ustidagisi.
+    /// Qalam/marker tanlangan bo'lsa, faqat tanlangan chizma ushlanadi (aks holda ustiga erkin chizib bo'lmaydi).
+    /// </summary>
+    /// <param name="p">Nuqta.</param>
+    /// <param name="tolerance">Ushlash radiusi, px.</param>
+    /// <returns>Chizma o'rni (yo'q bo'lsa −1) va qism.</returns>
+    public (int Index, AnnotationHandle Handle) HitTest(Point p, int tolerance)
+    {
+        if (Selected is { } selected)
+        {
+            var h = AnnotationGeometry.HitTest(selected, p, tolerance, withHandles: true);
+            if (h != AnnotationHandle.None)
+            {
+                return (SelectedIndex, h);
+            }
+        }
+
+        if (_tool is EditorTool.Pen or EditorTool.Marker)
+        {
+            return (-1, AnnotationHandle.None);
+        }
+
+        for (int i = _history.Count - 1; i >= 0; i--)
+        {
+            if (AnnotationGeometry.HitTest(_history.Items[i], p, tolerance, withHandles: false) != AnnotationHandle.None)
+            {
+                return (i, AnnotationHandle.Body);
+            }
+        }
+
+        return (-1, AnnotationHandle.None);
+    }
+
+    /// <summary>Chizmani ushlashga urinish (sichqoncha bosildi). Ushlansa — u tanlanadi va tahrir boshlanadi.</summary>
+    /// <param name="p">Nuqta.</param>
+    /// <param name="tolerance">Ushlash radiusi, px.</param>
+    /// <returns>Ushlangan bo'lsa <c>true</c>.</returns>
+    public bool TryBeginEdit(Point p, int tolerance)
+    {
+        var (index, handle) = HitTest(p, tolerance);
+        if (index < 0)
+        {
+            return false;
+        }
+
+        _selected = index;
+        _editHandle = handle;
+        _editOriginal = _history.Items[index];
+        _editStart = p;
+        EditPreview = _editOriginal;
+        IsEditing = true;
+        return true;
+    }
+
+    /// <summary>Tahrir: siljitish yoki tutqichni sudrash.</summary>
+    /// <param name="p">Nuqta.</param>
+    /// <param name="constrain">Shift (45° / kvadrat).</param>
+    public void Edit(Point p, bool constrain)
+    {
+        if (!IsEditing || _editOriginal is null)
+        {
+            return;
+        }
+
+        EditPreview = _editHandle == AnnotationHandle.Body
+            ? AnnotationGeometry.Move(_editOriginal, p.X - _editStart.X, p.Y - _editStart.Y)
+            : AnnotationGeometry.DragHandle(_editOriginal, _editHandle, p, constrain);
+    }
+
+    /// <summary>Tahrirni tugatish: o'zgarish bo'lsa — tarixga bitta qadam bo'lib yoziladi (Ctrl+Z bilan bekor qilinadi).</summary>
+    /// <param name="p">Nuqta.</param>
+    /// <param name="constrain">Shift.</param>
+    /// <returns>O'zgargan chizma yoki <c>null</c> (o'zgarmagan / yaroqsiz bo'lib qolgan).</returns>
+    public Annotation? EndEdit(Point p, bool constrain)
+    {
+        if (!IsEditing)
+        {
+            return null;
+        }
+
+        Edit(p, constrain);
+        var result = EditPreview;
+        bool moved = _editHandle != AnnotationHandle.Body || p != _editStart;
+        IsEditing = false;
+        EditPreview = null;
+
+        // Uchlari ustma-ust tushgan strelka yoki yassi to'rtburchak qabul qilinmaydi — oldingi holat qoladi.
+        if (result is null || !moved || !AnnotationGeometry.IsValid(result) || SelectedIndex < 0)
+        {
+            return null;
+        }
+
+        _history.Replace(SelectedIndex, result);
+        return result;
+    }
+
+    /// <summary>Tanlovni olib tashlash (tahrir ham bekor qilinadi).</summary>
+    public void Deselect()
+    {
+        _selected = -1;
+        IsEditing = false;
+        EditPreview = null;
+    }
+
+    /// <summary>Tanlangan chizmani o'chirish (Delete).</summary>
+    /// <returns>O'chirilgan bo'lsa <c>true</c>.</returns>
+    public bool DeleteSelected()
+    {
+        int index = SelectedIndex;
+        if (index < 0 || IsEditing)
+        {
+            return false;
+        }
+
+        _history.RemoveAt(index);
+        _selected = -1;
+        return true;
+    }
+
+    /// <summary>Mavjud matnni yangilaydi (ikki marta bosib tahrirlash). Bo'sh bo'lsa — matn o'chiriladi.</summary>
+    /// <param name="index">Matn o'rni.</param>
+    /// <param name="text">Yangi matn.</param>
+    /// <param name="measured">Yangi o'lcham.</param>
+    /// <returns>Yangilangan matn yoki <c>null</c> (o'chirildi).</returns>
+    public TextAnnotation? ReplaceText(int index, string? text, Size measured)
+    {
+        if (index < 0 || index >= _history.Count || _history.Items[index] is not TextAnnotation old)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index), index, "Bu o'rinda matn yo'q.");
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            _history.RemoveAt(index);
+            _selected = -1;
+            return null;
+        }
+
+        var updated = old with { Text = Normalize(text), Size = measured };
+        _history.Replace(index, updated);
+        _selected = index;
+        return updated;
     }
 
     /// <summary>Chizilayotgan shaklni bekor qilish.</summary>
@@ -192,12 +356,14 @@ public sealed class EditorController
             return null;
         }
 
-        // Windows qator oxirlari bir xil bo'lsin, oxiridagi bo'sh qatorlar olib tashlansin.
-        string normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd();
-        var annotation = new TextAnnotation(location, normalized, Color, fontSize, measured);
+        var annotation = new TextAnnotation(location, Normalize(text), Color, fontSize, measured);
         _history.Add(annotation);
+        _selected = _history.Count - 1;
         return annotation;
     }
+
+    /// <summary>Windows qator oxirlari bir xil bo'lsin, oxiridagi bo'sh qatorlar olib tashlansin.</summary>
+    private static string Normalize(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd();
 
     private static int Index(Thickness t) => t switch
     {

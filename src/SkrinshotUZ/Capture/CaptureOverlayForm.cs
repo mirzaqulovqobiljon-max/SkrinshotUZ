@@ -33,7 +33,9 @@ internal sealed class CaptureOverlayForm : Form
     private readonly Dictionary<int, Font> _fonts = new();
     private Rectangle _lastDirty;
     private Rectangle _lastPreview;
+    private Rectangle _lastEditBounds;
     private Point _mouse;
+    private int _editingTextIndex = -1;
 
     private TextBox? _textBox;
     private Font? _textFont;
@@ -147,8 +149,15 @@ internal sealed class CaptureOverlayForm : Form
             // Chizmalar faqat soha ichida ko'rinadi (natija rasmidagidek).
             var state = g.Save();
             g.SetClip(Rectangle.Intersect(sel, clip));
-            foreach (var a in _history.Items)
+            for (int i = 0; i < _history.Count; i++)
             {
+                // Qayta tahrirlanayotgan matn TextBox ostida — chizilmaydi.
+                if (i == _editingTextIndex)
+                {
+                    continue;
+                }
+
+                var a = _editor.IsEditing && i == _editor.SelectedIndex && _editor.EditPreview is { } live ? live : _history.Items[i];
                 if (a.Bounds.IntersectsWith(clip))
                 {
                     AnnotationRenderer.Draw(g, a, Point.Empty);
@@ -160,6 +169,7 @@ internal sealed class CaptureOverlayForm : Form
                 AnnotationRenderer.Draw(g, preview, Point.Empty);
             }
 
+            DrawAnnotationHandles(g);
             g.Restore(state);
         }
 
@@ -190,6 +200,28 @@ internal sealed class CaptureOverlayForm : Form
 
         if (e.Button == MouseButtons.Left)
         {
+            // Chizilgan shaklni ushlash: siljitish yoki uchlaridan/burchaklaridan cho'zish.
+            if (_selection.State == SelectionState.Selected && _selection.Selection.Contains(e.Location))
+            {
+                int before = _editor.SelectedIndex;
+                if (_editor.TryBeginEdit(e.Location, Grip()))
+                {
+                    _lastEditBounds = EditBounds();
+                    if (before != _editor.SelectedIndex)
+                    {
+                        InvalidateSelectionArea();
+                    }
+
+                    return;
+                }
+
+                if (_editor.SelectedIndex >= 0)
+                {
+                    _editor.Deselect();
+                    InvalidateSelectionArea();
+                }
+            }
+
             var handle = _selection.HitTest(e.Location, Grip());
             bool drawing = _editor.Tool != EditorTool.None && _selection.State == SelectionState.Selected && handle == SelectionHandle.Inside;
             if (drawing && _editor.Tool == EditorTool.Text)
@@ -239,6 +271,13 @@ internal sealed class CaptureOverlayForm : Form
             return;
         }
 
+        if (_editor.IsEditing)
+        {
+            _editor.Edit(e.Location, ShiftDown());
+            InvalidateEdit();
+            return;
+        }
+
         if (_selection.IsDragging)
         {
             _selection.Drag(e.Location);
@@ -260,6 +299,14 @@ internal sealed class CaptureOverlayForm : Form
         {
             _editor.End(e.Location, ShiftDown());
             InvalidatePreview();
+            InvalidateSelectionArea(); // yangi shakl tanlangan — tutqichlari ko'rinsin
+            return;
+        }
+
+        if (_editor.IsEditing)
+        {
+            _editor.EndEdit(e.Location, ShiftDown());
+            InvalidateSelectionArea();
             return;
         }
 
@@ -270,6 +317,19 @@ internal sealed class CaptureOverlayForm : Form
     protected override void OnMouseDoubleClick(MouseEventArgs e)
     {
         base.OnMouseDoubleClick(e);
+
+        // Matn ustida ikki marta bosish — matnni qayta tahrirlash.
+        if (e.Button == MouseButtons.Left && _textBox is null)
+        {
+            var (index, _) = _editor.HitTest(e.Location, Grip());
+            if (index >= 0 && _history.Items[index] is TextAnnotation text)
+            {
+                // Ikkinchi bosish matnni "ushlab" olgan — tahrir bekor, matn maydoni ochiladi.
+                _editor.Deselect();
+                BeginTextEdit(index, text);
+                return;
+            }
+        }
 
         // Asbob tanlanmagan bo'lsa, soha ichida ikki marta bosish — tayyor (nusxa olish).
         if (e.Button == MouseButtons.Left && _editor.Tool == EditorTool.None && _selection.HasSelection && _selection.Selection.Contains(e.Location))
@@ -301,7 +361,24 @@ internal sealed class CaptureOverlayForm : Form
         switch (key)
         {
             case Keys.Escape:
-                Cancel();
+                // Chizma tanlangan bo'lsa — avval faqat tanlovni olib tashlash (ish tasodifan yo'qolmasin).
+                if (_editor.SelectedIndex >= 0)
+                {
+                    _editor.Deselect();
+                    InvalidateSelectionArea();
+                }
+                else
+                {
+                    Cancel();
+                }
+
+                return true;
+            case Keys.Delete:
+                if (_editor.DeleteSelected())
+                {
+                    InvalidateSelectionArea();
+                }
+
                 return true;
             case Keys.Enter:
                 Accept();
@@ -311,10 +388,10 @@ internal sealed class CaptureOverlayForm : Form
                 return true;
             case Keys.Z when ctrl && shift:
             case Keys.Y when ctrl:
-                _history.Redo();
+                Redo();
                 return true;
             case Keys.Z when ctrl:
-                _history.Undo();
+                Undo();
                 return true;
             case Keys.A when ctrl:
                 // Ctrl+A — sichqoncha turgan monitorni to'liq tanlash.
@@ -399,8 +476,8 @@ internal sealed class CaptureOverlayForm : Form
                 SetColor(dialog.Color);
             }
         };
-        _toolbars.UndoClicked += (_, _) => _history.Undo();
-        _toolbars.RedoClicked += (_, _) => _history.Redo();
+        _toolbars.UndoClicked += (_, _) => Undo();
+        _toolbars.RedoClicked += (_, _) => Redo();
         _toolbars.CopyClicked += (_, _) => Accept();
         _toolbars.CloseClicked += (_, _) => Cancel();
         RefreshToolbarState();
@@ -412,6 +489,19 @@ internal sealed class CaptureOverlayForm : Form
         RefreshToolbarState();
         Cursor = CursorAt(_mouse);
         InvalidatePreview();
+    }
+
+    private void Undo()
+    {
+        // Tarix o'rinlarni o'zgartirishi mumkin — tanlov olib tashlanadi.
+        _editor.Deselect();
+        _history.Undo();
+    }
+
+    private void Redo()
+    {
+        _editor.Deselect();
+        _history.Redo();
     }
 
     private void SetColor(Color color)
@@ -436,15 +526,23 @@ internal sealed class CaptureOverlayForm : Form
 
     // ---------- Matn ----------
 
-    private void BeginText(Point location)
+    private void BeginTextEdit(int index, TextAnnotation text)
     {
-        double scale = ScaleAt(location);
-        _textFontSize = EditorController.FontSize(_editor.Thickness, scale);
+        _editingTextIndex = index;
+        BeginText(new Point(text.Location.X - 2, text.Location.Y - 1), text.Width, text.Color, text.Text.Replace("\n", Environment.NewLine, StringComparison.Ordinal));
+        InvalidateSelectionArea();
+    }
+
+    private void BeginText(Point location) =>
+        BeginText(location, EditorController.FontSize(_editor.Thickness, ScaleAt(location)), _editor.Color, string.Empty);
+
+    private void BeginText(Point location, float fontSize, Color color, string initialText)
+    {
+        _textFontSize = fontSize;
         _textFont?.Dispose();
         _textFont = AnnotationRenderer.CreateTextFont(_textFontSize);
 
         // Yorqin rang (sariq, oq) oq fonda ko'rinmaydi — fon rangga qarab tanlanadi.
-        var color = _editor.Color;
         bool light = (0.299 * color.R) + (0.587 * color.G) + (0.114 * color.B) > 170;
 
         var box = new TextBox
@@ -457,6 +555,7 @@ internal sealed class CaptureOverlayForm : Form
             ForeColor = color,
             BackColor = light ? Color.FromArgb(50, 50, 50) : Color.White,
             Location = location,
+            Text = initialText,
         };
         box.TextChanged += (_, _) => FitTextBox(box);
         _textBox = box;
@@ -464,6 +563,7 @@ internal sealed class CaptureOverlayForm : Form
         Controls.Add(box);
         box.BringToFront();
         box.Focus();
+        box.SelectionStart = box.TextLength;
     }
 
     private void FitTextBox(TextBox box)
@@ -497,8 +597,21 @@ internal sealed class CaptureOverlayForm : Form
         var location = new Point(box.Left + 2, box.Top + 1);
         Controls.Remove(box);
         box.Dispose();
-        _editor.CommitText(location, text, measured, _textFontSize);
+
+        int editing = _editingTextIndex;
+        _editingTextIndex = -1;
+        if (editing >= 0 && editing < _history.Count)
+        {
+            // Mavjud matn: o'rni saqlanadi; bo'shatilsa — o'chiriladi (Ctrl+Z bilan qaytadi).
+            _editor.ReplaceText(editing, text, measured);
+        }
+        else
+        {
+            _editor.CommitText(location, text, measured, _textFontSize);
+        }
+
         Focus();
+        InvalidateSelectionArea();
         UpdateView();
     }
 
@@ -535,6 +648,20 @@ internal sealed class CaptureOverlayForm : Form
 
     private Cursor CursorAt(Point p)
     {
+        if (_editor.IsEditing)
+        {
+            return Cursors.SizeAll;
+        }
+
+        if (_selection.State == SelectionState.Selected && _selection.Selection.Contains(p))
+        {
+            var (index, part) = _editor.HitTest(p, Grip());
+            if (index >= 0)
+            {
+                return part == AnnotationHandle.Body ? Cursors.SizeAll : Cursors.Hand;
+            }
+        }
+
         var handle = _selection.IsDragging ? _selection.ActiveHandle : _selection.HitTest(p, Grip());
         if (_editor.Tool != EditorTool.None && handle == SelectionHandle.Inside)
         {
@@ -550,6 +677,77 @@ internal sealed class CaptureOverlayForm : Form
             SelectionHandle.Inside => Cursors.SizeAll,
             _ => _selection.State == SelectionState.Moving ? Cursors.SizeAll : Cursors.Cross,
         };
+    }
+
+    /// <summary>Tutqich o'lchami (tanlangan chizma uchun), px.</summary>
+    private int HandleSize() => Math.Max(7, (int)Math.Round(9 * ScaleAt(_selection.Selection.Location)));
+
+    private Rectangle EditBounds() => (_editor.EditPreview ?? _editor.Selected)?.Bounds ?? Rectangle.Empty;
+
+    /// <summary>Tahrirlanayotgan chizma atrofini (eski va yangi joyi, tutqichlari bilan) qayta chizish.</summary>
+    private void InvalidateEdit()
+    {
+        var current = EditBounds();
+        var dirty = _lastEditBounds.IsEmpty ? current : current.IsEmpty ? _lastEditBounds : Rectangle.Union(_lastEditBounds, current);
+        if (!dirty.IsEmpty)
+        {
+            int pad = HandleSize() + 4;
+            Invalidate(Rectangle.Inflate(dirty, pad, pad));
+        }
+
+        _lastEditBounds = current;
+    }
+
+    /// <summary>Butun sohani qayta chizish (tanlov o'zgarganda — kam uchraydigan hodisa).</summary>
+    private void InvalidateSelectionArea()
+    {
+        if (_selection.HasSelection)
+        {
+            int pad = HandleSize() + 4;
+            Invalidate(Rectangle.Inflate(_selection.Selection, pad, pad));
+        }
+
+        _lastEditBounds = Rectangle.Empty;
+    }
+
+    /// <summary>
+    /// Tanlangan chizmaning tutqichlari: strelka/chiziq uchlarida — doiralar, to'rtburchak burchaklarida — kvadratlar,
+    /// qalam izi va matn atrofida — punktir ramka (ular faqat siljitiladi).
+    /// </summary>
+    private void DrawAnnotationHandles(Graphics g)
+    {
+        var a = _editor.EditPreview ?? _editor.Selected;
+        if (a is null || _editingTextIndex >= 0)
+        {
+            return;
+        }
+
+        int h = HandleSize();
+        using var fill = new SolidBrush(Color.White);
+        using var border = new Pen(Accent, Math.Max(1.5f, h / 6f));
+        var handles = AnnotationGeometry.Handles(a);
+        if (handles.Count == 0)
+        {
+            using var dashed = new Pen(Accent, Math.Max(1f, h / 8f)) { DashStyle = DashStyle.Dash };
+            var b = a.Bounds;
+            g.DrawRectangle(dashed, b.X, b.Y, b.Width - 1, b.Height - 1);
+            return;
+        }
+
+        foreach (var (kind, p) in handles)
+        {
+            var r = new Rectangle(p.X - (h / 2), p.Y - (h / 2), h, h);
+            if (kind is AnnotationHandle.Start or AnnotationHandle.End)
+            {
+                g.FillEllipse(fill, r);
+                g.DrawEllipse(border, r);
+            }
+            else
+            {
+                g.FillRectangle(fill, r);
+                g.DrawRectangle(border, r);
+            }
+        }
     }
 
     /// <summary>Chizilayotgan shakl atrofini qayta chizish (butun sohani emas — katta ekranda ham tez).</summary>

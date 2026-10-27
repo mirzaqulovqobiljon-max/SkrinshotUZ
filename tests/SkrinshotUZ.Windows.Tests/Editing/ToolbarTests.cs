@@ -38,6 +38,46 @@ public class ToolbarTests
     }
 
     [Fact]
+    public void GlyphIcons_UseWindowsIconFont_LineAndArrowAreVector()
+    {
+        // Kodlar Microsoft hujjatidan: Edit E70F, Highlight E7E6, Font E8D2, Undo E7A7, Redo E7A6 va h.k.
+        Assert.Equal('\uE70F', IconPainter.GlyphFor(ToolbarIcon.Pen));
+        Assert.Equal('\uE7E6', IconPainter.GlyphFor(ToolbarIcon.Marker));
+        Assert.Equal('\uE7A7', IconPainter.GlyphFor(ToolbarIcon.Undo));
+        Assert.Null(IconPainter.GlyphFor(ToolbarIcon.Line));
+        Assert.Null(IconPainter.GlyphFor(ToolbarIcon.Arrow));
+        Assert.Equal(10, Enum.GetValues<ToolbarIcon>().Count(i => IconPainter.GlyphFor(i) is not null));
+    }
+
+    [Fact]
+    public void GlyphIcon_IsCentered()
+    {
+        if (!IconPainter.HasGlyphFont)
+        {
+            return; // shriftsiz tizimda vektor ikonkalar ishlaydi (yuqoridagi test ularni ham tekshiradi)
+        }
+
+        using var bmp = IconPainter.Draw(ToolbarIcon.Close, 36);
+        int minX = 36, maxX = -1, minY = 36, maxY = -1;
+        for (int y = 0; y < 36; y++)
+        {
+            for (int x = 0; x < 36; x++)
+            {
+                if (bmp.GetPixel(x, y).A > 100)
+                {
+                    minX = Math.Min(minX, x);
+                    maxX = Math.Max(maxX, x);
+                    minY = Math.Min(minY, y);
+                    maxY = Math.Max(maxY, y);
+                }
+            }
+        }
+
+        Assert.InRange(minX + maxX, 33, 37); // markaz ≈ 17.5
+        Assert.InRange(minY + maxY, 33, 37);
+    }
+
+    [Fact]
     public void Swatch_HasChosenColorInCenter()
     {
         using var bmp = IconPainter.Swatch(Color.FromArgb(30, 160, 60), 24);
