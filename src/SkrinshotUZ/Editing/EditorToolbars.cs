@@ -246,5 +246,9 @@ internal sealed class EditorToolbars : IDisposable
         ShowItemToolTips = true,
         Visible = false,
         Font = _font,
+
+        // Aniq belgilanadi: aks holda ToolStrip ota oynaning kursorini meros oladi va overlay'ning
+        // "+" yoki "↔" kursori tugmalar ustida ham qolib ketadi.
+        Cursor = Cursors.Default,
     };
 }

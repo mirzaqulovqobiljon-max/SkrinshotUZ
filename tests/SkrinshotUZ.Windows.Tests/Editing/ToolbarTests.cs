@@ -108,6 +108,26 @@ public class ToolbarTests
         Assert.True(size200.Height > size100.Height * 1.6, $"200% da panel kattaroq bo'lishi kerak: {size100} → {size200}");
     }
 
+    [Theory]
+    [InlineData("Cross")]
+    [InlineData("SizeWE")]
+    [InlineData("SizeAll")]
+    [InlineData("SizeNWSE")]
+    public void Toolbars_ShowNormalArrow_EvenWhenOverlayCursorChanges(string overlayCursor)
+    {
+        // Overlay sichqoncha qayerdaligiga qarab o'z kursorini o'zgartiradi (+, ↔, ✥). Tugmalar ustida esa
+        // har doim oddiy strelka bo'lishi kerak (foydalanuvchi xabari: tugma ustida "+" va "↔" ko'rinardi).
+        using var form = new Form();
+        using var bars = new EditorToolbars();
+        form.Controls.Add(bars.Tools);
+        form.Controls.Add(bars.Actions);
+
+        form.Cursor = (Cursor)typeof(Cursors).GetProperty(overlayCursor)!.GetValue(null)!;
+
+        Assert.Same(Cursors.Default, bars.Tools.Cursor);
+        Assert.Same(Cursors.Default, bars.Actions.Cursor);
+    }
+
     [Fact]
     public void Toolbars_RaiseEvents()
     {

@@ -48,7 +48,7 @@ jobs:
         id: version
         run: |
           # Teg (v1.2.3) bo'lsa — aynan shu versiya; aks holda sinov yig'imi: 1.0.0-dev.<raqam>.
-          $base = '1.0.0'
+          $base = '1.0.1'
           if ($env:GITHUB_REF -like 'refs/tags/v*') {
             $v = $env:GITHUB_REF_NAME.Substring(1)
             if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Teg formati v1.2.3 bo'lishi kerak: $env:GITHUB_REF_NAME" }
