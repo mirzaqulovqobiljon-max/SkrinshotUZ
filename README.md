@@ -14,14 +14,14 @@ O'zbek maktablari uchun Windows skrinshot dasturi (Lightshot analogi). **PrintSc
 
 ### 1. O'rnatish
 
-1. [Releases](../../releases) sahifasidan `SkrinshotUZ_Setup-….exe` faylini yuklab oling.
+1. [Releases](../../releases/latest) sahifasidan `SkrinshotUZ_Setup.exe` faylini yuklab oling (to'g'ridan-to'g'ri havola: [SkrinshotUZ_Setup.exe](https://github.com/mirzaqulovqobiljon-max/SkrinshotUZ/releases/latest/download/SkrinshotUZ_Setup.exe)).
 2. Faylni ishga tushiring.
    - **"Windows kompyuteringizni himoya qildi"** degan ko'k oyna chiqsa, **"Batafsil" → "Baribir ishga tushirish"** ni bosing. Dastur raqamli imzosiz bo'lgani uchun Windows shunday ogohlantiradi.
 3. **Keyingi → O'rnatish → Tayyor.**
 
 O'rnatish uchun **administrator huquqi shart emas**: dastur faqat siz uchun o'rnatiladi. Boshlash menyusida va ish stolida "Skrinshot UZ" yorlig'i paydo bo'ladi.
 
-> **O'rnatmasdan ishlatish ham mumkin.** `SkrinshotUZ-…-x64.exe` (yoki eski 32-bit kompyuterlar uchun `-x86.exe`) faylini istalgan papkaga yoki fleshkaga qo'yib, to'g'ridan-to'g'ri ishga tushiring.
+> **O'rnatmasdan ishlatish ham mumkin.** `SkrinshotUZ-x64.exe` (yoki eski 32-bit kompyuterlar uchun `SkrinshotUZ-x86.exe`) faylini istalgan papkaga yoki fleshkaga qo'yib, to'g'ridan-to'g'ri ishga tushiring.
 
 ### 2. Birinchi ishga tushirish
 
@@ -132,7 +132,9 @@ SkrinshotUZ.sln
    ```
    git tag v1.0.0 && git push origin v1.0.0
    ```
-   Fayllar **Releases** sahifasiga avtomatik qo'yiladi (SHA256 bilan).
+   Fayllar **Releases** sahifasiga avtomatik qo'yiladi (SHA256 bilan). Nomlari o'zgarmas, shuning uchun saytga
+   qo'yiladigan doimiy havola har doim eng yangi versiyani beradi:
+   `https://github.com/mirzaqulovqobiljon-max/SkrinshotUZ/releases/latest/download/SkrinshotUZ_Setup.exe`
 
 CI har safar quyidagilarni tekshiradi:
 - build ogohlantirishsiz;

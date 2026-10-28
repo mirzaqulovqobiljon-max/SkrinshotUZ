@@ -396,16 +396,20 @@ jobs:
           tag="${GITHUB_REF_NAME}"
           ver="${tag#v}"
           mkdir -p out
-          cp "dist/SkrinshotUZ_Setup-${ver}/SkrinshotUZ_Setup.exe" "out/SkrinshotUZ_Setup-${ver}.exe"
-          cp "dist/SkrinshotUZ-${ver}-win-x64/SkrinshotUZ.exe" "out/SkrinshotUZ-${ver}-x64.exe"
-          cp "dist/SkrinshotUZ-${ver}-win-x86/SkrinshotUZ.exe" "out/SkrinshotUZ-${ver}-x86.exe"
+          # Fayl nomlari o'zgarmas — shunda .../releases/latest/download/SkrinshotUZ_Setup.exe havolasi
+          # har doim eng yangi versiyani beradi (saytga bir marta qo'yiladigan doimiy havola).
+          cp "dist/SkrinshotUZ_Setup-${ver}/SkrinshotUZ_Setup.exe" "out/SkrinshotUZ_Setup.exe"
+          cp "dist/SkrinshotUZ-${ver}-win-x64/SkrinshotUZ.exe" "out/SkrinshotUZ-x64.exe"
+          cp "dist/SkrinshotUZ-${ver}-win-x86/SkrinshotUZ.exe" "out/SkrinshotUZ-x86.exe"
           (cd out && sha256sum *.exe > SHA256SUMS.txt)
           cat > notes.md <<NOTES
           ## Skrinshot UZ ${ver}
 
           **Qaysi faylni yuklab olish kerak?**
-          - \`SkrinshotUZ_Setup-${ver}.exe\` — o'rnatuvchi (tavsiya etiladi). 64-bit va 32-bit Windows 10/11 uchun, administrator huquqi shart emas.
-          - \`SkrinshotUZ-${ver}-x64.exe\` / \`-x86.exe\` — o'rnatmasdan ishlaydigan bitta fayl (fleshkadan ham).
+          - \`SkrinshotUZ_Setup.exe\` — o'rnatuvchi (tavsiya etiladi). 64-bit va 32-bit Windows 10/11 uchun, administrator huquqi shart emas.
+          - \`SkrinshotUZ-x64.exe\` / \`SkrinshotUZ-x86.exe\` — o'rnatmasdan ishlaydigan bitta fayl (fleshkadan ham).
+
+          Windows "kompyuteringizni himoya qildi" desa: "Batafsil" → "Baribir ishga tushirish" (dastur raqamli imzosiz).
 
           Dastur to'liq oflayn ishlaydi: hech qanday rasm internetga yuborilmaydi.
           Fayllar butunligini tekshirish: \`SHA256SUMS.txt\`.
