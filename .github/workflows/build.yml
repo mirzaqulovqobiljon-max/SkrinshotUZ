@@ -8,6 +8,9 @@ on:
   push:
     branches: [ main ]
     tags: [ 'v*' ]
+  # GitHub sahifasida "Draft a new release" → yangi teg (v1.2.3) → Publish — fayllar shu Release'ga yuklanadi.
+  release:
+    types: [ published ]
   pull_request:
   workflow_dispatch:
 
@@ -414,4 +417,10 @@ jobs:
           Dastur to'liq oflayn ishlaydi: hech qanday rasm internetga yuborilmaydi.
           Fayllar butunligini tekshirish: \`SHA256SUMS.txt\`.
           NOTES
-          gh release create "$tag" out/* --repo "$GITHUB_REPOSITORY" --title "Skrinshot UZ ${ver}" --notes-file notes.md
+          # Release GitHub sahifasida qo'lda yaratilgan bo'lishi ham mumkin — unda fayllar unga qo'shiladi.
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$tag" out/* --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "Skrinshot UZ ${ver}" --notes-file notes.md
+          else
+            gh release create "$tag" out/* --repo "$GITHUB_REPOSITORY" --title "Skrinshot UZ ${ver}" --notes-file notes.md
+          fi
