@@ -329,6 +329,7 @@ jobs:
           #    Foydalanuvchi ruxsatlarga avval javob bergan holat; avtoishga tushirish yoqilgan.
           New-Item -ItemType Directory -Force $appData | Out-Null
           '{ "PrintScreenConsent": "Allowed", "SnippingToolPromptAnswered": true }' | Set-Content (Join-Path $appData 'settings.json') -Encoding utf8
+          if (-not (Test-Path $runKey)) { New-Item $runKey | Out-Null }   # ba'zi toza Windows'larda Run kaliti umuman yo'q
           Set-ItemProperty $runKey -Name 'Skrinshot UZ' -Value "`"$exe`" --autostart"
           $running = Start-Process $exe -PassThru
           Start-Sleep -Seconds 4
