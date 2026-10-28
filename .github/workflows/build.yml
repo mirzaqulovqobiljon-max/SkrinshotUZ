@@ -289,6 +289,8 @@ jobs:
 
       - name: O'rnatish / yangilash / o'chirish testi
         run: |
+          # Har qanday xato matni annotatsiyaga chiqsin (loglarni ochmasdan ham ko'rinsin).
+          trap { Write-Host "::error title=O'rnatuvchi testi::$($_.Exception.Message) (qator $($_.InvocationInfo.ScriptLineNumber))"; Get-ChildItem $env:RUNNER_TEMP -Filter 'install*.log' | ForEach-Object { $t = (Get-Content $_.FullName | Select-Object -Last 15) -join '%0A'; Write-Host "::error title=$($_.Name)::$t" }; exit 1 }
           $setup = (Resolve-Path "publish/setup/SkrinshotUZ_Setup.exe").Path
           $dir = Join-Path $env:LOCALAPPDATA "Programs\Skrinshot UZ"
           $exe = Join-Path $dir "SkrinshotUZ.exe"
