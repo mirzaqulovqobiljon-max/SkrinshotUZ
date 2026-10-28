@@ -237,16 +237,25 @@ jobs:
       - name: O'rnatuvchini yig'ish (Inno Setup)
         id: setup
         run: |
-          $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $iscc) {
-            choco install innosetup -y --no-progress | Out-Null
-            $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          function Find-Iscc { @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1 }
+          function Inno-Version {
+            # ISCC.exe'ning o'z versiya ma'lumoti bo'sh (0.0.0.0) — versiya o'rnatuvchi yozuvidan olinadi.
+            $keys = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1',
+                    'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1'
+            foreach ($k in $keys) { $v = (Get-ItemProperty $k -ErrorAction SilentlyContinue).DisplayVersion; if ($v) { return [version]($v -replace '[^\d\.].*$','') } }
+            return [version]'0.0'
+          }
+          $iscc = Find-Iscc
+          if (-not $iscc -or (Inno-Version) -lt [version]'6.5') {
+            Write-Host "Inno Setup 6.5+ o'rnatilmoqda (hozirgi: $(Inno-Version))"
+            choco upgrade innosetup -y --no-progress | Out-Null
+            $iscc = Find-Iscc
           }
           if (-not $iscc) { throw "Inno Setup (ISCC.exe) topilmadi" }
           $innoDir = Split-Path $iscc
-          $innoVersion = (Get-Item $iscc).VersionInfo.ProductVersion
+          $innoVersion = Inno-Version
           Write-Host "::notice title=Inno Setup::$innoVersion ($iscc)"
-          if ([version]($innoVersion -replace '[^\d\.].*$','') -lt [version]'6.5') { throw "Inno Setup 6.5+ kerak, topildi: $innoVersion" }
+          if ($innoVersion -lt [version]'6.5') { throw "Inno Setup 6.5+ kerak, topildi: $innoVersion" }
 
           # O'zbekcha tarjima o'rnatilgan Inno versiyasining Default.isl'iga to'liq mosmi.
           python installer/check-isl.py "$innoDir\Default.isl" installer/Uzbek.isl
