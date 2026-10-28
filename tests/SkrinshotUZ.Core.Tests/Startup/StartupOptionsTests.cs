@@ -39,4 +39,29 @@ public class StartupOptionsTests
         Assert.Throws<ArgumentException>(() => StartupOptions.Parse(new[] { "--smoke-report", "--smoke-test" }));
         Assert.Throws<ArgumentException>(() => StartupOptions.Parse(new[] { "--smoke-report", "  " }));
     }
+
+    [Fact]
+    public void InstallerFlags_AreParsed_CaseInsensitive()
+    {
+        var o = StartupOptions.Parse(new[] { "--UNINSTALL", "--quiet" });
+
+        Assert.True(o.Uninstall);
+        Assert.True(o.Quiet);
+        Assert.False(o.Exit);
+        Assert.False(o.SmokeTest);
+
+        var e = StartupOptions.Parse(new[] { "--exit" });
+        Assert.True(e.Exit);
+        Assert.False(e.Uninstall);
+        Assert.False(e.Quiet);
+    }
+
+    [Fact]
+    public void Default_HasNoInstallerFlags()
+    {
+        Assert.False(StartupOptions.Default.Uninstall);
+        Assert.False(StartupOptions.Default.Exit);
+        Assert.False(StartupOptions.Default.Quiet);
+        Assert.False(StartupOptions.Parse(new[] { "--autostart" }).Uninstall);
+    }
 }

@@ -48,6 +48,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private HotkeyManager? _hotkeys;
     private PermissionFlow? _permissions;
     private RegisteredWaitHandle? _activateWait;
+    private RegisteredWaitHandle? _exitWait;
+    private readonly EventWaitHandle? _exitSignal;
     private SynchronizationContext? _ui;
     private bool _dialogOpen;
     private bool _capturing;
@@ -64,10 +66,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
     /// <summary>Tray ikonkasini yaratadi; qolgan ishlar xabar sikli boshlangach bajariladi.</summary>
     /// <param name="options">Ishga tushirish parametrlari.</param>
     /// <param name="activateSignal">Ikkinchi nusxa ochilganda signal beradigan hodisa.</param>
-    public TrayApplicationContext(StartupOptions options, EventWaitHandle? activateSignal)
+    /// <param name="exitSignal">O'rnatuvchi "yopil" deganda signal beradigan hodisa.</param>
+    public TrayApplicationContext(StartupOptions options, EventWaitHandle? activateSignal, EventWaitHandle? exitSignal = null)
     {
         _options = options;
         _activateSignal = activateSignal;
+        _exitSignal = exitSignal;
         _icon = AppIcon.LoadSmall();
 
         // O'qituvchilar uchun menyu shrifti odatdagidan biroz kattaroq.
@@ -160,6 +164,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             _startupTimer.Dispose();
             _activateWait?.Unregister(null);
+            _exitWait?.Unregister(null);
             _hotkeys?.Dispose();
             _keyboardHook?.Dispose();
             _hotkeyService?.Dispose();
@@ -207,9 +212,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _historyStore = new JsonHistoryStore(AppPaths.HistoryFile(appData));
         _history = _historyStore.Load();
 
+        // Signallar ruxsat oynalaridan OLDIN tinglanadi: o'rnatuvchi (yangilash/o'chirish) dastur savol oynasida
+        // turgan paytda ham uni yopa olsin.
+        ListenForSecondInstance();
         RunDialog(_permissions.RunAtStartup);
         ApplyHotkeys();
-        ListenForSecondInstance();
 
         if (!_options.Autostart)
         {
@@ -830,6 +837,17 @@ internal sealed class TrayApplicationContext : ApplicationContext
             null,
             Timeout.Infinite,
             executeOnlyOnce: false);
+
+        if (_exitSignal is not null)
+        {
+            // O'rnatuvchi yangilash yoki o'chirishdan oldin yopilishni so'raydi.
+            _exitWait = ThreadPool.RegisterWaitForSingleObject(
+                _exitSignal,
+                (_, _) => _ui?.Post(_ => ExitThread(), null),
+                null,
+                Timeout.Infinite,
+                executeOnlyOnce: true);
+        }
     }
 
     private void ShowBalloon(string text, ToolTipIcon icon, Action? onClick = null)

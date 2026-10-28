@@ -14,6 +14,12 @@ internal static class Program
     /// <summary>Ikkinchi nusxa birinchisiga "men ochilmoqchi edim" deb signal beradi.</summary>
     private const string ActivateEventName = @"Local\SkrinshotUZ.Activate.6C3F2A1E";
 
+    /// <summary>O'rnatuvchi (yangilash/o'chirish) ishlab turgan nusxaga "yopil" deb signal beradi.</summary>
+    private const string ExitEventName = @"Local\SkrinshotUZ.Exit.6C3F2A1E";
+
+    /// <summary>Ishlab turgan nusxa yopilishini kutish vaqti.</summary>
+    private static readonly TimeSpan ExitWait = TimeSpan.FromSeconds(10);
+
     private const int ExitOk = 0;
     private const int ExitBadArguments = 2;
     private const int ExitAlreadyRunning = 3;
@@ -29,6 +35,19 @@ internal static class Program
         catch (ArgumentException)
         {
             return ExitBadArguments;
+        }
+
+        // O'rnatuvchi buyruqlari: tray ochilmaydi, bitta nusxa qulfi olinmaydi.
+        if (options.Exit || options.Uninstall)
+        {
+            bool closed = CloseRunningInstance();
+            if (options.Uninstall)
+            {
+                ApplicationConfiguration.Initialize(); // TaskDialog uchun vizual uslublar
+                Uninstaller.CleanUp(options.Quiet);
+            }
+
+            return closed ? ExitOk : ExitAlreadyRunning;
         }
 
         // Ikkinchi nusxa ochilmaydi: PrintScreen tugmasini ikki dastur birdaniga ushlamasligi kerak.
@@ -58,7 +77,8 @@ internal static class Program
             ApplicationConfiguration.Initialize();
 
             using var activateSignal = new EventWaitHandle(false, EventResetMode.AutoReset, ActivateEventName);
-            using var context = new TrayApplicationContext(options, activateSignal);
+            using var exitSignal = new EventWaitHandle(false, EventResetMode.ManualReset, ExitEventName);
+            using var context = new TrayApplicationContext(options, activateSignal, exitSignal);
             if (options.SmokeTest)
             {
                 SmokeTest.Attach(context, options.SmokeReportPath);
@@ -70,6 +90,45 @@ internal static class Program
         finally
         {
             mutex.ReleaseMutex();
+        }
+    }
+
+    /// <summary>
+    /// Ishlab turgan nusxani yopadi (o'rnatuvchi faylni almashtirishi yoki o'chirishi uchun) va u yopilishini kutadi.
+    /// </summary>
+    /// <returns>Hech qanday nusxa ishlamayotgan bo'lsa yoki u yopilgan bo'lsa <c>true</c>.</returns>
+    private static bool CloseRunningInstance()
+    {
+        if (!Mutex.TryOpenExisting(SingleInstanceMutexName, out var running))
+        {
+            return true;
+        }
+
+        using (running)
+        {
+            if (EventWaitHandle.TryOpenExisting(ExitEventName, out var signal))
+            {
+                using (signal)
+                {
+                    signal.Set();
+                }
+            }
+
+            try
+            {
+                // Mutex bo'shasa (yoki egasi yopilib "tashlab ketilgan" bo'lsa) — nusxa yopildi.
+                if (running.WaitOne(ExitWait))
+                {
+                    running.ReleaseMutex();
+                    return true;
+                }
+
+                return false;
+            }
+            catch (AbandonedMutexException)
+            {
+                return true;
+            }
         }
     }
 }

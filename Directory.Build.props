@@ -13,7 +13,7 @@
     <DebugType>embedded</DebugType>
 
     <!-- Versiya CI'da -p:Version=... orqali almashtiriladi -->
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
     <Company>Skrinshot UZ</Company>
     <Product>Skrinshot UZ</Product>
     <Copyright>© 2026 Skrinshot UZ</Copyright>

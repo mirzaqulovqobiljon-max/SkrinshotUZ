@@ -9,6 +9,18 @@ namespace SkrinshotUZ.Core.Startup;
 /// <param name="Autostart"><c>--autostart</c>: Windows bilan birga ishga tushirilgan (xush kelibsiz xabari chiqmaydi).</param>
 public sealed record StartupOptions(bool SmokeTest, string? SmokeReportPath, bool Autostart)
 {
+    /// <summary>
+    /// <c>--uninstall</c>: o'rnatuvchi dasturni o'chirayotganda chaqiradi — ishlab turgan nusxani yopadi, avtoishga
+    /// tushirish yozuvini olib tashlaydi, Qirqish vositasi sozlamasini qaytarishni taklif qiladi. Tray ochilmaydi.
+    /// </summary>
+    public bool Uninstall { get; init; }
+
+    /// <summary><c>--exit</c>: ishlab turgan nusxani yopadi (o'rnatuvchi yangilashdan oldin chaqiradi).</summary>
+    public bool Exit { get; init; }
+
+    /// <summary><c>--quiet</c>: hech qanday oyna chiqmasin (jim o'rnatish/o'chirish).</summary>
+    public bool Quiet { get; init; }
+
     /// <summary>Parametrsiz oddiy ishga tushirish.</summary>
     public static StartupOptions Default { get; } = new(false, null, false);
 
@@ -22,6 +34,9 @@ public sealed record StartupOptions(bool SmokeTest, string? SmokeReportPath, boo
 
         bool smoke = false;
         bool autostart = false;
+        bool uninstall = false;
+        bool exit = false;
+        bool quiet = false;
         string? report = null;
 
         for (int i = 0; i < args.Count; i++)
@@ -35,6 +50,18 @@ public sealed record StartupOptions(bool SmokeTest, string? SmokeReportPath, boo
             {
                 autostart = true;
             }
+            else if (string.Equals(a, "--uninstall", StringComparison.OrdinalIgnoreCase))
+            {
+                uninstall = true;
+            }
+            else if (string.Equals(a, "--exit", StringComparison.OrdinalIgnoreCase))
+            {
+                exit = true;
+            }
+            else if (string.Equals(a, "--quiet", StringComparison.OrdinalIgnoreCase))
+            {
+                quiet = true;
+            }
             else if (string.Equals(a, "--smoke-report", StringComparison.OrdinalIgnoreCase))
             {
                 if (i + 1 >= args.Count || string.IsNullOrWhiteSpace(args[i + 1]) || args[i + 1].StartsWith("--", StringComparison.Ordinal))
@@ -46,6 +73,6 @@ public sealed record StartupOptions(bool SmokeTest, string? SmokeReportPath, boo
             }
         }
 
-        return new StartupOptions(smoke, report, autostart);
+        return new StartupOptions(smoke, report, autostart) { Uninstall = uninstall, Exit = exit, Quiet = quiet };
     }
 }

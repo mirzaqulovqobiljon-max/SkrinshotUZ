@@ -187,6 +187,46 @@ public sealed class PermissionFlow
     public bool SetAutostart(bool enabled) =>
         TryChangeSystemSetting(enabled ? _autostart.Enable : _autostart.Disable);
 
+    /// <summary>
+    /// Dastur o'chirilayotganda (o'rnatuvchi <c>--uninstall</c> bilan chaqiradi): o'zining avtoishga tushirish yozuvini
+    /// olib tashlaydi (aks holda Windows yo'q faylni ishga tushirishga urinadi) va Qirqish vositasi sozlamasini avval
+    /// Skrinshot UZ o'chirgan bo'lsa — uni qaytarishni SO'RAYDI. Jim rejimda (<paramref name="quiet"/>) tizim sozlamasi
+    /// so'roqsiz o'zgartirilmaydi.
+    /// </summary>
+    /// <param name="quiet">Jim o'chirish (<c>/VERYSILENT</c>) — hech qanday oyna chiqmaydi.</param>
+    /// <returns>Qirqish vositasi qayta yoqildimi.</returns>
+    public bool CleanUpForUninstall(bool quiet)
+    {
+        if (IsAutostartEnabled())
+        {
+            try
+            {
+                _autostart.Disable();
+            }
+            catch (Exception ex) when (IsAccessError(ex))
+            {
+                // O'zimizning yozuvimiz — o'chirib bo'lmasa ham o'chirishni to'xtatmaymiz.
+            }
+        }
+
+        bool restored = false;
+        if (Settings.SnippingToolDisabledByApp && !quiet && _prompts.AskRestoreSnippingTool())
+        {
+            try
+            {
+                _snipping.Enable();
+                Settings.SnippingToolDisabledByApp = false;
+                restored = true;
+            }
+            catch (Exception ex) when (IsAccessError(ex))
+            {
+                _prompts.ShowWarning(Strings.Warning_SystemSettingDenied);
+            }
+        }
+
+        return restored;
+    }
+
     private void AskPrintScreen(bool offerAutostart)
     {
         var answer = _prompts.AskPrintScreenPermission(offerAutostart);

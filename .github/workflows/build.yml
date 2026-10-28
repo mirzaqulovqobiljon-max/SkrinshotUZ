@@ -1,6 +1,7 @@
 # Skrinshot UZ — Windows'da yig'ish, testlash va .exe chiqarish.
 # Har push'da: build (ogohlantirishlarsiz) → unit testlar → win-x64 va win-x86 bitta .exe →
-# tutun testi (.exe haqiqatan ishga tushadimi, xotira qancha) → Artifacts.
+# tutun testi (.exe haqiqatan ishga tushadimi, xotira qancha) → o'rnatuvchi (Inno Setup) →
+# o'rnatish / yangilash / o'chirish testi → Artifacts. "v1.0.0" kabi teg qo'yilsa — GitHub Release.
 name: Build va test
 
 on:
@@ -43,10 +44,19 @@ jobs:
       - name: Versiyani aniqlash
         id: version
         run: |
-          $v = "0.1.$env:GITHUB_RUN_NUMBER"
-          if ($env:GITHUB_REF -like 'refs/tags/v*') { $v = $env:GITHUB_REF_NAME.Substring(1) }
+          # Teg (v1.2.3) bo'lsa — aynan shu versiya; aks holda sinov yig'imi: 1.0.0-dev.<raqam>.
+          $base = '1.0.0'
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $v = $env:GITHUB_REF_NAME.Substring(1)
+            if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Teg formati v1.2.3 bo'lishi kerak: $env:GITHUB_REF_NAME" }
+            $numeric = "$v.0"
+          } else {
+            $v = "$base-dev.$env:GITHUB_RUN_NUMBER"
+            $numeric = "$base.$([math]::Min([int]$env:GITHUB_RUN_NUMBER, 65535))"
+          }
           "value=$v" >> $env:GITHUB_OUTPUT
-          Write-Host "Versiya: $v"
+          "numeric=$numeric" >> $env:GITHUB_OUTPUT
+          Write-Host "Versiya: $v ($numeric)"
 
       - name: Paketlarni tiklash
         run: dotnet restore SkrinshotUZ.sln
@@ -224,6 +234,124 @@ jobs:
             Write-Host "::notice title=chop-png $($i + 1)/$n::$chunk"
           }
 
+      - name: O'rnatuvchini yig'ish (Inno Setup)
+        id: setup
+        run: |
+          $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            choco install innosetup -y --no-progress | Out-Null
+            $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          if (-not $iscc) { throw "Inno Setup (ISCC.exe) topilmadi" }
+          $innoDir = Split-Path $iscc
+          $innoVersion = (Get-Item $iscc).VersionInfo.ProductVersion
+          Write-Host "::notice title=Inno Setup::$innoVersion ($iscc)"
+          if ([version]($innoVersion -replace '[^\d\.].*$','') -lt [version]'6.5') { throw "Inno Setup 6.5+ kerak, topildi: $innoVersion" }
+
+          # O'zbekcha tarjima o'rnatilgan Inno versiyasining Default.isl'iga to'liq mosmi.
+          python installer/check-isl.py "$innoDir\Default.isl" installer/Uzbek.isl
+          if ($LASTEXITCODE -ne 0) { throw "Uzbek.isl tarjimasida xato bor" }
+
+          $root = (Get-Location).Path
+          $ErrorActionPreference = 'Continue'
+          $PSNativeCommandUseErrorActionPreference = $false
+          & $iscc `
+            "/DAppVersion=${{ steps.version.outputs.value }}" `
+            "/DAppNumericVersion=${{ steps.version.outputs.numeric }}" `
+            "/DSourceX64=$root\publish\win-x64" `
+            "/DSourceX86=$root\publish\win-x86" `
+            "/DOutputDir=$root\publish\setup" `
+            installer\SkrinshotUZ.iss 2>&1 | Tee-Object -FilePath iscc-output.txt
+          $code = $LASTEXITCODE
+          $ErrorActionPreference = 'Stop'
+          $warnings = @(Get-Content iscc-output.txt | Where-Object { $_ -match '^\s*Warning' })
+          foreach ($w in $warnings) { Write-Host "::error title=Inno Setup ogohlantirishi::$w" }
+          if ($code -ne 0) { throw "ISCC xato bilan tugadi ($code)" }
+          if ($warnings.Count -gt 0) { throw "Inno Setup ogohlantirishlari bor (talab: ogohlantirishsiz)" }
+
+          $setup = "publish/setup/SkrinshotUZ_Setup.exe"
+          if (-not (Test-Path $setup)) { throw "$setup topilmadi" }
+          $mb = [math]::Round((Get-Item $setup).Length / 1MB, 1)
+          Write-Host "::notice title=SkrinshotUZ_Setup.exe::$mb MB (x64 + x86)"
+          "- **SkrinshotUZ_Setup.exe**: $mb MB" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: O'rnatish / yangilash / o'chirish testi
+        run: |
+          $setup = (Resolve-Path "publish/setup/SkrinshotUZ_Setup.exe").Path
+          $dir = Join-Path $env:LOCALAPPDATA "Programs\Skrinshot UZ"
+          $exe = Join-Path $dir "SkrinshotUZ.exe"
+          $appData = Join-Path $env:APPDATA "Skrinshot UZ"
+          $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) "Skrinshot UZ.lnk"
+          $desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) "Skrinshot UZ.lnk"
+          $uninstKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{45B6F012-9A70-43A6-901D-74D221DC5E30}_is1'
+          $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+          $pictures = Join-Path ([Environment]::GetFolderPath('MyPictures')) "Skrinshot UZ"
+
+          function Install([string]$log) {
+            $p = Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/LOG=`"$log`"" -PassThru -Wait
+            if ($p.ExitCode -ne 0) { Get-Content $log -ErrorAction SilentlyContinue | Select-Object -Last 30 | Write-Host; throw "o'rnatuvchi chiqish kodi $($p.ExitCode)" }
+          }
+          function Machine([string]$file) {
+            $b = [IO.File]::ReadAllBytes($file); $pe = [BitConverter]::ToInt32($b, 0x3C)
+            return '{0:X4}' -f [BitConverter]::ToUInt16($b, $pe + 4)
+          }
+
+          # 1) Toza o'rnatish (administrator huquqisiz, faqat joriy foydalanuvchi uchun).
+          Install (Join-Path $env:RUNNER_TEMP 'install1.log')
+          foreach ($f in $exe, $startMenu, $desktop) { if (-not (Test-Path $f)) { throw "o'rnatilmadi: $f" } }
+          if ((Machine $exe) -ne '8664') { throw "64-bit Windows'ga 64-bit .exe o'rnatilishi kerak edi (topildi: $(Machine $exe))" }
+          $reg = Get-ItemProperty $uninstKey
+          if ($reg.DisplayName -ne 'Skrinshot UZ' -or $reg.DisplayVersion -ne '${{ steps.version.outputs.value }}') { throw "Dasturlar ro'yxatidagi yozuv noto'g'ri: $($reg.DisplayName) $($reg.DisplayVersion)" }
+          if (Test-Path $appData) { throw "o'rnatuvchi sozlamalar yaratmasligi kerak (ruxsatlar dasturda so'raladi)" }
+          if ((Get-ItemProperty $runKey -ErrorAction SilentlyContinue).'Skrinshot UZ') { throw "o'rnatuvchi avtoishga tushirishni o'zi yoqmasligi kerak" }
+          Write-Host "::notice title=O'rnatish::$dir (x64), Boshlash menyusi va ish stoli yorliqlari, Dasturlar ro'yxatida ${{ steps.version.outputs.value }}"
+
+          # 2) O'rnatilgan .exe ishlaydimi (tutun testi).
+          $report = Join-Path $env:RUNNER_TEMP 'smoke-installed.txt'
+          $p = Start-Process $exe -ArgumentList '--smoke-test', '--smoke-report', "`"$report`"" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "o'rnatilgan .exe tutun testi: chiqish kodi $($p.ExitCode)" }
+
+          # 3) Yangilash dastur ishlab turganda: o'rnatuvchi uni o'zi yopishi kerak (--exit).
+          #    Foydalanuvchi ruxsatlarga avval javob bergan holat; avtoishga tushirish yoqilgan.
+          New-Item -ItemType Directory -Force $appData | Out-Null
+          '{ "PrintScreenConsent": "Allowed", "SnippingToolPromptAnswered": true }' | Set-Content (Join-Path $appData 'settings.json') -Encoding utf8
+          Set-ItemProperty $runKey -Name 'Skrinshot UZ' -Value "`"$exe`" --autostart"
+          $running = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 4
+          if ($running.HasExited) { throw "dastur ishga tushmadi (chiqish kodi $($running.ExitCode))" }
+          $before = (Get-Item $exe).LastWriteTimeUtc
+          Install (Join-Path $env:RUNNER_TEMP 'install2.log')
+          if (-not $running.WaitForExit(5000)) { $running.Kill(); throw "yangilashda ishlab turgan dastur yopilmadi" }
+          if (-not (Test-Path $exe)) { throw "yangilashdan keyin .exe yo'q" }
+          Write-Host "::notice title=Yangilash::ishlab turgan dastur avtomatik yopildi, fayl almashtirildi"
+
+          # 4) O'chirish (jim): fayllar, yorliqlar, ro'yxat yozuvi, avtoishga tushirish, sozlamalar o'chadi;
+          #    skrinshotlar QOLADI.
+          New-Item -ItemType Directory -Force $pictures | Out-Null
+          $keep = Join-Path $pictures 'skrinshot_ci_test.png'
+          Set-Content $keep 'test'
+          $running = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 3
+          $uninst = Join-Path $dir 'unins000.exe'
+          Start-Process $uninst -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait
+          # unins000.exe o'zini vaqtinchalik papkaga nusxalab ishlaydi — natijani kutamiz.
+          for ($i = 0; $i -lt 60 -and (Test-Path $exe); $i++) { Start-Sleep -Seconds 1 }
+          if (-not $running.WaitForExit(5000)) { $running.Kill(); throw "o'chirishda ishlab turgan dastur yopilmadi" }
+          foreach ($f in $exe, $startMenu, $desktop, $appData) { if (Test-Path $f) { throw "o'chirilmadi: $f" } }
+          if (Test-Path $uninstKey) { throw "Dasturlar ro'yxatidagi yozuv qoldi" }
+          if ((Get-ItemProperty $runKey -ErrorAction SilentlyContinue).'Skrinshot UZ') { throw "avtoishga tushirish yozuvi qoldi" }
+          if (-not (Test-Path $keep)) { throw "skrinshotlar o'chirib yuborildi!" }
+          Remove-Item $pictures -Recurse -Force
+          Write-Host "::notice title=O'chirish::fayllar, yorliqlar, avtoishga tushirish va sozlamalar o'chirildi; skrinshotlar saqlanib qoldi"
+          "- **O'rnatuvchi testi**: o'rnatish, ishlab turgan dasturni yangilash, o'chirish — o'tdi" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: SkrinshotUZ_Setup.exe ni Artifacts'ga qo'yish
+        uses: actions/upload-artifact@v6
+        with:
+          name: SkrinshotUZ_Setup-${{ steps.version.outputs.value }}
+          path: publish/setup/SkrinshotUZ_Setup.exe
+          if-no-files-found: error
+
       - name: SkrinshotUZ.exe (64-bit) ni Artifacts'ga qo'yish
         uses: actions/upload-artifact@v6
         with:
@@ -237,3 +365,40 @@ jobs:
           name: SkrinshotUZ-${{ steps.version.outputs.value }}-win-x86
           path: publish/win-x86/SkrinshotUZ.exe
           if-no-files-found: error
+
+  release:
+    name: GitHub Release (faqat v* teglarida)
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Artifacts'ni olish
+        uses: actions/download-artifact@v7
+        with:
+          path: dist
+
+      - name: Release yaratish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          ver="${tag#v}"
+          mkdir -p out
+          cp "dist/SkrinshotUZ_Setup-${ver}/SkrinshotUZ_Setup.exe" "out/SkrinshotUZ_Setup-${ver}.exe"
+          cp "dist/SkrinshotUZ-${ver}-win-x64/SkrinshotUZ.exe" "out/SkrinshotUZ-${ver}-x64.exe"
+          cp "dist/SkrinshotUZ-${ver}-win-x86/SkrinshotUZ.exe" "out/SkrinshotUZ-${ver}-x86.exe"
+          (cd out && sha256sum *.exe > SHA256SUMS.txt)
+          cat > notes.md <<NOTES
+          ## Skrinshot UZ ${ver}
+
+          **Qaysi faylni yuklab olish kerak?**
+          - \`SkrinshotUZ_Setup-${ver}.exe\` — o'rnatuvchi (tavsiya etiladi). 64-bit va 32-bit Windows 10/11 uchun, administrator huquqi shart emas.
+          - \`SkrinshotUZ-${ver}-x64.exe\` / \`-x86.exe\` — o'rnatmasdan ishlaydigan bitta fayl (fleshkadan ham).
+
+          Dastur to'liq oflayn ishlaydi: hech qanday rasm internetga yuborilmaydi.
+          Fayllar butunligini tekshirish: \`SHA256SUMS.txt\`.
+          NOTES
+          gh release create "$tag" out/* --repo "$GITHUB_REPOSITORY" --title "Skrinshot UZ ${ver}" --notes-file notes.md
