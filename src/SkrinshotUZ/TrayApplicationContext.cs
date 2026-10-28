@@ -7,6 +7,7 @@ using SkrinshotUZ.Core.Editing;
 using SkrinshotUZ.Core.Hotkeys;
 using SkrinshotUZ.Core.Localization;
 using SkrinshotUZ.Core.Permissions;
+using SkrinshotUZ.Core.Printing;
 using SkrinshotUZ.Core.Platform;
 using SkrinshotUZ.Core.Settings;
 using SkrinshotUZ.Core.Startup;
@@ -14,6 +15,7 @@ using SkrinshotUZ.Core.Storage;
 using SkrinshotUZ.Editing;
 using SkrinshotUZ.Storage;
 using SkrinshotUZ.Native;
+using SkrinshotUZ.Printing;
 using SkrinshotUZ.UI;
 
 namespace SkrinshotUZ;
@@ -52,6 +54,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private string? _smokeCaptureResult;
     private string? _smokeSaveResult;
     private string? _smokeHistoryPreview;
+    private string? _smokePrintResult;
+    private string? _smokePrintPreview;
     private ScreenshotHistory _history = new();
     private JsonHistoryStore? _historyStore;
     private HistoryForm? _historyForm;
@@ -130,6 +134,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
             if (_smokeHistoryPreview is not null)
             {
                 lines.Add("history=" + _smokeHistoryPreview);
+            }
+
+            lines.Add("print=" + (_smokePrintResult ?? "not-run"));
+            if (_smokePrintPreview is not null)
+            {
+                lines.Add("printview=" + _smokePrintPreview);
             }
 
             return lines;
@@ -332,6 +342,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             var layout = WindowsScreenInfo.GetLayout();
             using var screen = ScreenCapture.CaptureVirtualScreen(layout);
             using var image = ScreenCapture.Crop(screen, new Rectangle(Point.Empty, screen.Size));
+            ImageDpi.Set(image, layout.Monitors.FirstOrDefault(m => m.IsPrimary)?.Dpi ?? Units.BaseDpi);
             string folder = CurrentSaveFolder();
             Directory.CreateDirectory(folder);
             SaveImage(image, ScreenshotFileNamer.CreateUniquePath(folder, DateTime.Now, CurrentFormat, File.Exists));
@@ -367,7 +378,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
-        _historyForm = new HistoryForm(_history, CurrentSaveFolder(), SaveHistory);
+        _historyForm = new HistoryForm(_history, CurrentSaveFolder(), SaveHistory, PrintFile);
         _historyForm.FormClosed += (_, _) =>
         {
             _historyForm?.Dispose();
@@ -390,6 +401,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
 
         _capturing = true;
+        Bitmap? toPrint = null;
         try
         {
             ScreenLayout layout;
@@ -410,18 +422,23 @@ internal sealed class TrayApplicationContext : ApplicationContext
             {
                 if (overlay.ShowDialog() == DialogResult.OK && overlay.Result is Rectangle selection)
                 {
-                    using var cropped = ImageComposer.Compose(screen, selection, overlay.Annotations);
-                    if (overlay.Action == OverlayAction.Save && overlay.SavePath is string savePath)
+                    var cropped = ImageComposer.Compose(screen, selection, overlay.Annotations);
+
+                    // Rasm qaysi monitorda olingan — o'sha masshtab "Asl o'lchamda" chop etish uchun rasmga yoziladi
+                    // (PNG/JPG faylda ham saqlanadi).
+                    var center = new Point(selection.X + (selection.Width / 2), selection.Y + (selection.Height / 2));
+                    ImageDpi.Set(cropped, layout.MonitorAtCanvas(center).Dpi);
+
+                    if (overlay.Action == OverlayAction.Print)
                     {
-                        SaveImage(cropped, savePath);
-                    }
-                    else if (CopyToClipboard(cropped))
-                    {
-                        ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.Capture_Copied, OverlayLayout.SizeText(cropped.Size)), ToolTipIcon.Info);
+                        toPrint = cropped; // chop etish oynasi overlay yopilgandan keyin ochiladi
                     }
                     else
                     {
-                        ShowBalloon(Strings.Capture_ClipboardBusy, ToolTipIcon.Warning);
+                        using (cropped)
+                        {
+                            FinishCapture(overlay, cropped);
+                        }
                     }
                 }
             }
@@ -431,6 +448,70 @@ internal sealed class TrayApplicationContext : ApplicationContext
             _capturing = false;
             MemoryTrimmer.Trim(); // katta ekran rasmlari endi kerak emas
         }
+
+        if (toPrint is not null)
+        {
+            using (toPrint)
+            {
+                ShowPrint(toPrint);
+            }
+        }
+    }
+
+    /// <summary>Overlay natijasi: saqlash yoki buferga nusxa.</summary>
+    private void FinishCapture(CaptureOverlayForm overlay, Bitmap cropped)
+    {
+        if (overlay.Action == OverlayAction.Save && overlay.SavePath is string savePath)
+        {
+            SaveImage(cropped, savePath);
+        }
+        else if (CopyToClipboard(cropped))
+        {
+            ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.Capture_Copied, OverlayLayout.SizeText(cropped.Size)), ToolTipIcon.Info);
+        }
+        else
+        {
+            ShowBalloon(Strings.Capture_ClipboardBusy, ToolTipIcon.Warning);
+        }
+    }
+
+    // ---------- Chop etish ----------
+
+    /// <summary>Chop etish oynasi (modal). Sozlamalar eslab qolinadi; PDF saqlansa — xabarni bosib papkada ko'rish mumkin.</summary>
+    private void ShowPrint(Bitmap image)
+    {
+        var prefs = _permissions?.Settings.Print ?? new PrintPreferences();
+        using var form = new PrintForm(image, prefs, _history.Entries.ToList(), CurrentSaveFolder());
+        bool done = form.ShowDialog() == DialogResult.OK;
+        _permissions?.SaveSettings(); // oxirgi sozlamalar (printer, rejim…) keyingi safar ham shunday bo'lsin
+        if (!done || form.Outcome is not PrintOutcome outcome)
+        {
+            return;
+        }
+
+        if (outcome.PdfPath is string pdf)
+        {
+            ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.Print_PdfSaved, Path.GetFileName(pdf)), ToolTipIcon.Info, () => Shell.ShowInFolder(pdf));
+        }
+        else
+        {
+            string what = string.Format(CultureInfo.InvariantCulture, Strings.Print_PagesCount, outcome.Pages) +
+                (outcome.Copies > 1 ? string.Format(CultureInfo.InvariantCulture, Strings.Print_CopiesSuffix, outcome.Copies) : string.Empty);
+            ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.Print_Sent, what), ToolTipIcon.Info);
+        }
+    }
+
+    /// <summary>Tarix oynasidan: saqlangan faylni chop etish.</summary>
+    private void PrintFile(string path)
+    {
+        using var image = Thumbnails.Load(path);
+        if (image is null)
+        {
+            MessageBox.Show(Strings.Print_LoadFailed, Strings.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        ShowPrint(image);
     }
 
     /// <summary>Buferga nusxa (bufer boshqa dastur tomonidan band bo'lsa — bir necha marta urinadi).</summary>
@@ -485,6 +566,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
             using var fromClipboard = Clipboard.GetImage();
             (_smokeSaveResult, _smokeHistoryPreview) = RunSmokeSave(cropped);
+            (_smokePrintResult, _smokePrintPreview) = RunSmokePrint(cropped, layout.MonitorAtCanvas(selection.Location).Dpi);
             string monitors = string.Join(";", layout.Monitors.Select(m => string.Create(CultureInfo.InvariantCulture, $"{m.Bounds.Width}x{m.Bounds.Height}@{m.Dpi}")));
             return fromClipboard is not null && fromClipboard.Size == cropped.Size
                 ? string.Create(CultureInfo.InvariantCulture, $"ok {cropped.Width}x{cropped.Height} annotated canvas={layout.CanvasSize.Width}x{layout.CanvasSize.Height} monitors={monitors}")
@@ -497,6 +579,113 @@ internal sealed class TrayApplicationContext : ApplicationContext
         finally
         {
             MemoryTrimmer.Trim();
+        }
+    }
+
+    /// <summary>
+    /// CI tutun testi: chop etish oynasini ochadi ("Bir varaqqa 2 ta", sarlavha + sana), rasmini oladi va
+    /// "Microsoft Print to PDF" orqali haqiqiy PDF chiqaradi (o'rnatilgan bo'lsa). Hech qanday oyna/xabar chiqmaydi.
+    /// </summary>
+    private static (string Result, string? Preview) RunSmokePrint(Bitmap source, double dpi)
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "SkrinshotUZ.print." + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var image = new Bitmap(source);
+            ImageDpi.Set(image, dpi);
+            var prefs = new PrintPreferences();
+            string? preview;
+            string pdfResult;
+            using (var form = new PrintForm(image, prefs, Array.Empty<HistoryEntry>(), dir) { StartPosition = FormStartPosition.Manual, Location = Point.Empty })
+            {
+                form.Show();
+                form.SetModeForTest(PrintMode.TwoPerPage, "7-B sinf", showDate: true);
+                form.Refresh();
+                form.RenderPreviewNow();
+                form.Refresh();
+                using (var shot = new Bitmap(form.Width, form.Height))
+                {
+                    form.DrawToBitmap(shot, new Rectangle(Point.Empty, form.Size));
+                    preview = "ok png=" + SmokeTest.ToJpegBase64(shot, 0.5, 45);
+                }
+
+                var plan = form.Plan;
+                if (plan is null || plan.Pages.Count != 1 || plan.Pages[0].Images.Count != 2 || plan.Pages[0].Captions.Count != 2)
+                {
+                    return ("error: 'Bir varaqqa 2 ta' rejasi noto'g'ri", preview);
+                }
+
+                if (!Printers.HasPdfPrinter())
+                {
+                    pdfResult = "pdf=skip (Microsoft Print to PDF yo'q; printerlar: " + Printers.Installed().Count + ")";
+                }
+                else
+                {
+                    Directory.CreateDirectory(dir);
+                    string pdf = Path.Combine(dir, "smoke.pdf");
+                    string? error = form.PrintToPdfForTest(pdf);
+                    if (error is not null)
+                    {
+                        return ("error: PDF: " + error.Replace('\r', ' ').Replace('\n', ' '), preview);
+                    }
+
+                    // Spooler faylni biroz kechikib yozishi mumkin.
+                    long size = 0;
+                    for (int i = 0; i < 100 && size == 0; i++)
+                    {
+                        if (File.Exists(pdf))
+                        {
+                            size = new FileInfo(pdf).Length;
+                        }
+
+                        if (size == 0)
+                        {
+                            Thread.Sleep(150);
+                        }
+                    }
+
+                    if (size == 0)
+                    {
+                        return ("error: PDF fayl paydo bo'lmadi", preview);
+                    }
+
+                    Thread.Sleep(300);
+                    byte[] head = new byte[5];
+                    using (var stream = new FileStream(pdf, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        stream.ReadExactly(head);
+                    }
+
+                    if (System.Text.Encoding.ASCII.GetString(head) != "%PDF-")
+                    {
+                        return ("error: fayl PDF emas", preview);
+                    }
+
+                    pdfResult = string.Create(CultureInfo.InvariantCulture, $"pdf=ok {new FileInfo(pdf).Length / 1024} KB");
+                }
+
+                form.Close();
+            }
+
+            return (string.Create(CultureInfo.InvariantCulture, $"ok 2-per-page dpi={dpi} {pdfResult} printers={Printers.Installed().Count}"), preview);
+        }
+        catch (Exception ex) when (ex is Win32Exception or ExternalException or IOException or InvalidOperationException or ArgumentException or UnauthorizedAccessException)
+        {
+            return ("error: " + ex.GetType().Name + ": " + ex.Message.Replace('\r', ' ').Replace('\n', ' '), null);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(dir))
+                {
+                    Directory.Delete(dir, recursive: true);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // vaqtinchalik papka
+            }
         }
     }
 

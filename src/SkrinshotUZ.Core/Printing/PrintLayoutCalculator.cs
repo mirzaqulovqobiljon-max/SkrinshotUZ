@@ -85,15 +85,18 @@ public static class PrintLayoutCalculator
     /// <param name="heightPx">Rasm balandligi, px.</param>
     /// <param name="orientation">Varaq yo'nalishi (avtomatik uchun <see cref="AutoOrientation"/>).</param>
     /// <param name="margins">Maydonlar.</param>
+    /// <param name="bottomReserveMm">Rasm ostida qoldiriladigan joy (sarlavha/sana uchun), mm.</param>
     /// <returns>Joylashuv.</returns>
-    public static PageLayout FitToA4(int widthPx, int heightPx, PageOrientation orientation, PrintMargins margins)
+    public static PageLayout FitToA4(int widthPx, int heightPx, PageOrientation orientation, PrintMargins margins, double bottomReserveMm = 0)
     {
         Guard.Positive(widthPx, nameof(widthPx));
         Guard.Positive(heightPx, nameof(heightPx));
         ArgumentNullException.ThrowIfNull(margins);
 
+        Guard.NonNegative(bottomReserveMm, nameof(bottomReserveMm));
+
         var page = A4(orientation);
-        var area = PrintableArea(new RectMm(0, 0, page.Width, page.Height), margins.EffectiveLeft, margins.EffectiveTop, margins.EffectiveRight, margins.EffectiveBottom);
+        var area = PrintableArea(new RectMm(0, 0, page.Width, page.Height), margins.EffectiveLeft, margins.EffectiveTop, margins.EffectiveRight, margins.EffectiveBottom + bottomReserveMm);
         var image = FitCentered(area, widthPx, heightPx);
         return new PageLayout(orientation, page, area, image, new PixelRect(0, 0, widthPx, heightPx), FitsOnPage: true);
     }
@@ -106,22 +109,24 @@ public static class PrintLayoutCalculator
     /// <param name="heightPx">Rasm balandligi, px.</param>
     /// <param name="slot">Yuqori yoki pastki yarim.</param>
     /// <param name="margins">Maydonlar.</param>
+    /// <param name="bottomReserveMm">Rasm ostida qoldiriladigan joy (sarlavha/sana uchun), mm.</param>
     /// <returns>Joylashuv.</returns>
-    public static PageLayout FitToHalfA4(int widthPx, int heightPx, HalfPageSlot slot, PrintMargins margins)
+    public static PageLayout FitToHalfA4(int widthPx, int heightPx, HalfPageSlot slot, PrintMargins margins, double bottomReserveMm = 0)
     {
         Guard.Positive(widthPx, nameof(widthPx));
         Guard.Positive(heightPx, nameof(heightPx));
         ArgumentNullException.ThrowIfNull(margins);
+        Guard.NonNegative(bottomReserveMm, nameof(bottomReserveMm));
 
         var page = A4(PageOrientation.Portrait);
         RectMm area = slot switch
         {
             HalfPageSlot.Top => PrintableArea(
                 new RectMm(0, 0, A4WidthMm, HalfA4HeightMm),
-                margins.EffectiveLeft, margins.EffectiveTop, margins.EffectiveRight, margins.UserMarginMm),
+                margins.EffectiveLeft, margins.EffectiveTop, margins.EffectiveRight, margins.UserMarginMm + bottomReserveMm),
             HalfPageSlot.Bottom => PrintableArea(
                 new RectMm(0, HalfA4HeightMm, A4WidthMm, HalfA4HeightMm),
-                margins.EffectiveLeft, margins.UserMarginMm, margins.EffectiveRight, margins.EffectiveBottom),
+                margins.EffectiveLeft, margins.UserMarginMm, margins.EffectiveRight, margins.EffectiveBottom + bottomReserveMm),
             _ => throw new ArgumentOutOfRangeException(nameof(slot), slot, "Noma'lum yarim."),
         };
 
@@ -135,11 +140,12 @@ public static class PrintLayoutCalculator
     /// <param name="bottomWidthPx">Pastki rasm kengligi, px.</param>
     /// <param name="bottomHeightPx">Pastki rasm balandligi, px.</param>
     /// <param name="margins">Maydonlar.</param>
+    /// <param name="bottomReserveMm">Rasm ostida qoldiriladigan joy (sarlavha/sana uchun), mm.</param>
     /// <returns>Ikki joylashuv va kesish chizig'i.</returns>
-    public static TwoPerPageLayout TwoPerPage(int topWidthPx, int topHeightPx, int bottomWidthPx, int bottomHeightPx, PrintMargins margins) =>
+    public static TwoPerPageLayout TwoPerPage(int topWidthPx, int topHeightPx, int bottomWidthPx, int bottomHeightPx, PrintMargins margins, double bottomReserveMm = 0) =>
         new(
-            FitToHalfA4(topWidthPx, topHeightPx, HalfPageSlot.Top, margins),
-            FitToHalfA4(bottomWidthPx, bottomHeightPx, HalfPageSlot.Bottom, margins),
+            FitToHalfA4(topWidthPx, topHeightPx, HalfPageSlot.Top, margins, bottomReserveMm),
+            FitToHalfA4(bottomWidthPx, bottomHeightPx, HalfPageSlot.Bottom, margins, bottomReserveMm),
             HalfA4HeightMm);
 
     /// <summary>Rasmning ekrandagi haqiqiy o'lchami, mm.</summary>
@@ -164,13 +170,15 @@ public static class PrintLayoutCalculator
     /// <param name="monitorDpi">Monitor DPI qiymati.</param>
     /// <param name="orientation">Varaq yo'nalishi.</param>
     /// <param name="margins">Maydonlar.</param>
+    /// <param name="bottomReserveMm">Rasm ostida qoldiriladigan joy (sarlavha/sana uchun), mm.</param>
     /// <returns>Joylashuv.</returns>
-    public static PageLayout ActualSize(int widthPx, int heightPx, double monitorDpi, PageOrientation orientation, PrintMargins margins)
+    public static PageLayout ActualSize(int widthPx, int heightPx, double monitorDpi, PageOrientation orientation, PrintMargins margins, double bottomReserveMm = 0)
     {
         ArgumentNullException.ThrowIfNull(margins);
+        Guard.NonNegative(bottomReserveMm, nameof(bottomReserveMm));
         var size = ActualSizeMm(widthPx, heightPx, monitorDpi);
         var page = A4(orientation);
-        var area = PrintableArea(new RectMm(0, 0, page.Width, page.Height), margins.EffectiveLeft, margins.EffectiveTop, margins.EffectiveRight, margins.EffectiveBottom);
+        var area = PrintableArea(new RectMm(0, 0, page.Width, page.Height), margins.EffectiveLeft, margins.EffectiveTop, margins.EffectiveRight, margins.EffectiveBottom + bottomReserveMm);
         var image = new RectMm(area.X, area.Y, size.Width, size.Height);
         bool fits = image.IsInside(area, FitTolerance);
         return new PageLayout(orientation, page, area, image, new PixelRect(0, 0, widthPx, heightPx), fits);
@@ -186,16 +194,18 @@ public static class PrintLayoutCalculator
     /// <param name="monitorDpi">Monitor DPI qiymati.</param>
     /// <param name="orientation">Varaq yo'nalishi.</param>
     /// <param name="margins">Maydonlar.</param>
+    /// <param name="bottomReserveMm">Rasm ostida qoldiriladigan joy (sarlavha/sana uchun), mm.</param>
     /// <returns>Varaqlar ro'yxati (kamida bitta).</returns>
-    public static IReadOnlyList<TileLayout> SplitIntoPages(int widthPx, int heightPx, double monitorDpi, PageOrientation orientation, PrintMargins margins)
+    public static IReadOnlyList<TileLayout> SplitIntoPages(int widthPx, int heightPx, double monitorDpi, PageOrientation orientation, PrintMargins margins, double bottomReserveMm = 0)
     {
         Guard.Positive(widthPx, nameof(widthPx));
         Guard.Positive(heightPx, nameof(heightPx));
         Guard.Positive(monitorDpi, nameof(monitorDpi));
         ArgumentNullException.ThrowIfNull(margins);
+        Guard.NonNegative(bottomReserveMm, nameof(bottomReserveMm));
 
         var page = A4(orientation);
-        var area = PrintableArea(new RectMm(0, 0, page.Width, page.Height), margins.EffectiveLeft, margins.EffectiveTop, margins.EffectiveRight, margins.EffectiveBottom);
+        var area = PrintableArea(new RectMm(0, 0, page.Width, page.Height), margins.EffectiveLeft, margins.EffectiveTop, margins.EffectiveRight, margins.EffectiveBottom + bottomReserveMm);
 
         // Bir varaqqa sig'adigan butun piksellar soni (kichik epsilon — 2.0 ning 1.9999999 bo'lib qolmasligi uchun).
         int tileW = (int)Math.Floor(Units.MmToPixels(area.Width, monitorDpi) + 1e-9);

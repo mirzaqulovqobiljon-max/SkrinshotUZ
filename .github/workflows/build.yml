@@ -162,6 +162,13 @@ jobs:
             $save = ([regex]::Match($text, '(?m)^save=(.*?)\r?$')).Groups[1].Value
             if ($save -like 'ok*') { Write-Host "::notice title=${rid} saqlash::$save" }
             else { throw "${rid}: saqlash ishlamadi — $save" }
+            # Chop etish: oyna, reja va "Microsoft Print to PDF" orqali haqiqiy PDF.
+            $print = ([regex]::Match($text, '(?m)^print=(.*?)\r?$')).Groups[1].Value
+            if ($print -like 'ok*') {
+              Write-Host "::notice title=${rid} chop etish::$print"
+              if ($print -like '*pdf=skip*') { Write-Host "::warning::${rid}: PDF printer yo'q — PDF tekshirilmadi" }
+            }
+            else { throw "${rid}: chop etish ishlamadi — $print" }
             "- **${rid}** tutun testi o'tdi — ishchi xotira: $ws MB, shaxsiy: $priv MB, eng yuqori: $peak MB; tugmalar: $keys" >> $env:GITHUB_STEP_SUMMARY
             if ($ws -ge 40) { Write-Host "::warning::${rid}: xotira $ws MB (maqsad < 40 MB)" }
           }
@@ -198,6 +205,23 @@ jobs:
           for ($i = 0; $i -lt $n; $i++) {
             $chunk = $b64.Substring($i * $size, [math]::Min($size, $b64.Length - $i * $size))
             Write-Host "::notice title=tarix-png $($i + 1)/$n::$chunk"
+          }
+
+      - name: Chop etish oynasi rasmi (ko'rib chiqish uchun)
+        run: |
+          $report = Join-Path $env:RUNNER_TEMP "smoke-win-x64.txt"
+          $line = (Get-Content -LiteralPath $report | Where-Object { $_ -like 'printview=*' } | Select-Object -First 1)
+          if (-not $line) { Write-Host "::warning::chop etish rasmi topilmadi"; exit 0 }
+          $parts = $line.Substring(10) -split ' png=', 2
+          Write-Host "::notice title=chop-info::$($parts[0])"
+          if ($parts.Count -lt 2) { exit 0 }
+          $b64 = $parts[1]
+          $size = 4000   # GitHub annotatsiya matnini 4096 belgida kesadi
+          $n = [math]::Ceiling($b64.Length / $size)
+          if ($n -gt 9) { Write-Host "::warning::chop etish rasmi juda katta ($($b64.Length) belgi)"; exit 0 }
+          for ($i = 0; $i -lt $n; $i++) {
+            $chunk = $b64.Substring($i * $size, [math]::Min($size, $b64.Length - $i * $size))
+            Write-Host "::notice title=chop-png $($i + 1)/$n::$chunk"
           }
 
       - name: SkrinshotUZ.exe (64-bit) ni Artifacts'ga qo'yish

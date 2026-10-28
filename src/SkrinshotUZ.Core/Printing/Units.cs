@@ -33,6 +33,20 @@ public static class Units
         return mm * dpi / MmPerInch;
     }
 
+    /// <summary>Rasm faylidan o'qilgan DPI uchun ruxsat etilgan eng kichik qiymat.</summary>
+    public const double MinImageDpi = 48;
+
+    /// <summary>Rasm faylidan o'qilgan DPI uchun ruxsat etilgan eng katta qiymat.</summary>
+    public const double MaxImageDpi = 960;
+
+    /// <summary>
+    /// Rasm faylidagi DPI (Skrinshot UZ uni monitor masshtabi bilan yozadi). Yo'q yoki aqlga sig'maydigan qiymat bo'lsa — 96 (100%).
+    /// </summary>
+    /// <param name="dpi">Fayldan o'qilgan qiymat.</param>
+    /// <returns>Ishonchli DPI.</returns>
+    public static double SanitizeImageDpi(double dpi) =>
+        double.IsFinite(dpi) && dpi >= MinImageDpi && dpi <= MaxImageDpi ? dpi : BaseDpi;
+
     /// <summary>
     /// Millimetrni dyuymning yuzdan bir ulushiga aylantiradi.
     /// WinForms PrintDocument'da Graphics standart birligi (GraphicsUnit.Display) aynan shu.

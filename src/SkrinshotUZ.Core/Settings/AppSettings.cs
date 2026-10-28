@@ -43,7 +43,15 @@ public sealed class AppSettings
     /// <summary>Saqlash formati (oxirgi tanlangani; standart — PNG).</summary>
     public Storage.ImageFileFormat SaveFormat { get; set; } = Storage.ImageFileFormat.Png;
 
-    /// <summary>Nusxa.</summary>
+    /// <summary>Chop etish sozlamalari (oxirgi tanlangani).</summary>
+    public Printing.PrintPreferences Print { get; set; } = new();
+
+    /// <summary>Nusxa (ichki obyektlar ham nusxalanadi).</summary>
     /// <returns>Yangi obyekt.</returns>
-    public AppSettings Clone() => (AppSettings)MemberwiseClone();
+    public AppSettings Clone()
+    {
+        var copy = (AppSettings)MemberwiseClone();
+        copy.Print = (Print ?? new Printing.PrintPreferences()).Clone();
+        return copy;
+    }
 }

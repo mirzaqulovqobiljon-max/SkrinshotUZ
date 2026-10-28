@@ -16,6 +16,9 @@ internal enum OverlayAction
 
     /// <summary>Faylga saqlash (Ctrl+S, "Saqlash") — yo'l <see cref="CaptureOverlayForm.SavePath"/> da.</summary>
     Save,
+
+    /// <summary>Chop etish (Ctrl+P, "Chop etish") — overlay yopilgach chop etish oynasi ochiladi.</summary>
+    Print,
 }
 
 /// <summary>
@@ -411,6 +414,9 @@ internal sealed class CaptureOverlayForm : Form
             case Keys.S when ctrl:
                 SaveAs();
                 return true;
+            case Keys.P when ctrl:
+                Accept(OverlayAction.Print);
+                return true;
             case Keys.Z when ctrl && shift:
             case Keys.Y when ctrl:
                 Redo();
@@ -505,6 +511,7 @@ internal sealed class CaptureOverlayForm : Form
         _toolbars.RedoClicked += (_, _) => Redo();
         _toolbars.CopyClicked += (_, _) => Accept();
         _toolbars.SaveClicked += (_, _) => SaveAs();
+        _toolbars.PrintClicked += (_, _) => Accept(OverlayAction.Print);
         _toolbars.CloseClicked += (_, _) => Cancel();
         RefreshToolbarState();
     }

@@ -68,6 +68,25 @@ internal static class ImageSaver
     }
 }
 
+/// <summary>Rasm ichida saqlanadigan monitor DPI'si (PNG pHYs / JPEG JFIF) — "Asl o'lchamda" chop etish uchun.</summary>
+internal static class ImageDpi
+{
+    /// <summary>Rasmning DPI'si (yo'q yoki g'alati bo'lsa — 96).</summary>
+    public static double Of(Image image)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        return SkrinshotUZ.Core.Printing.Units.SanitizeImageDpi(image.HorizontalResolution);
+    }
+
+    /// <summary>Rasmga monitor DPI'sini yozadi (faylga saqlanganda ham qoladi).</summary>
+    public static void Set(Bitmap image, double dpi)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        float value = (float)SkrinshotUZ.Core.Printing.Units.SanitizeImageDpi(dpi);
+        image.SetResolution(value, value);
+    }
+}
+
 /// <summary>Tarix oynasi uchun rasmchalar.</summary>
 internal static class Thumbnails
 {
@@ -116,7 +135,9 @@ internal static class Thumbnails
         {
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var image = Image.FromStream(stream);
-            return new Bitmap(image);
+            var copy = new Bitmap(image);
+            copy.SetResolution(image.HorizontalResolution, image.VerticalResolution); // DPI = monitor masshtabi ("Asl o'lcham" uchun)
+            return copy;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or OutOfMemoryException or ExternalException)
         {

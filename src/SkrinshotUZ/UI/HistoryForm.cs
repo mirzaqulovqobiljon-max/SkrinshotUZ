@@ -20,6 +20,7 @@ internal sealed class HistoryForm : Form
     private readonly Button _show;
     private readonly Button _copy;
     private readonly Button _remove;
+    private readonly Button? _print;
     private readonly Font _font;
     private readonly Icon _icon;
 
@@ -27,7 +28,8 @@ internal sealed class HistoryForm : Form
     /// <param name="history">Tarix (oyna uni o'zgartirishi mumkin — keyin <paramref name="changed"/> chaqiriladi).</param>
     /// <param name="folder">Skrinshotlar papkasi ("Papkani ochish" tugmasi uchun).</param>
     /// <param name="changed">Tarix o'zgarganda (diskka yozish uchun).</param>
-    public HistoryForm(ScreenshotHistory history, string folder, Action changed)
+    /// <param name="print">"Chop etish" tugmasi uchun (fayl yo'li bilan); <c>null</c> — tugma yo'q.</param>
+    public HistoryForm(ScreenshotHistory history, string folder, Action changed, Action<string>? print = null)
     {
         _history = history ?? throw new ArgumentNullException(nameof(history));
         _folder = folder;
@@ -81,11 +83,22 @@ internal sealed class HistoryForm : Form
         _open = MakeButton(Strings.History_Open, OpenSelected);
         _show = MakeButton(Strings.History_ShowInFolder, () => WithSelected(Shell.ShowInFolder));
         _copy = MakeButton(Strings.History_Copy, CopySelected);
+        if (print is not null)
+        {
+            _print = MakeButton(Strings.History_Print, () => WithSelected(print));
+        }
+
         _remove = MakeButton(Strings.History_Remove, RemoveSelected);
         var folderButton = MakeButton(Strings.History_OpenFolder, () => Shell.OpenFolder(_folder));
 
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, Padding = new Padding(4), WrapContents = true };
-        buttons.Controls.AddRange(new Control[] { _open, _show, _copy, _remove, folderButton });
+        buttons.Controls.AddRange(new Control[] { _open, _show, _copy });
+        if (_print is not null)
+        {
+            buttons.Controls.Add(_print);
+        }
+
+        buttons.Controls.AddRange(new Control[] { _remove, folderButton });
 
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(8) };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -223,6 +236,10 @@ internal sealed class HistoryForm : Form
         _show.Enabled = selected;
         _copy.Enabled = selected;
         _remove.Enabled = selected;
+        if (_print is not null)
+        {
+            _print.Enabled = selected;
+        }
     }
 
     private void WithSelected(Action<string> action)

@@ -96,7 +96,13 @@ public sealed class JsonSettingsStore : ISettingsStore
     public string Path => _path;
 
     /// <inheritdoc />
-    public AppSettings Load() => JsonFile.Read(_path, () => new AppSettings());
+    public AppSettings Load()
+    {
+        var settings = JsonFile.Read(_path, () => new AppSettings());
+        settings.Print ??= new Printing.PrintPreferences(); // eski fayllarda "Print" bo'lmaydi yoki null
+        settings.Print.Normalize();
+        return settings;
+    }
 
     /// <inheritdoc />
     public void Save(AppSettings settings)

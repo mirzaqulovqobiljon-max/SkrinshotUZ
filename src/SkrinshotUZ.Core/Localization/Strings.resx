@@ -213,7 +213,7 @@ Xatolik haqida ma'lumot shu faylga yozildi:
     <value>Saqlash (Ctrl+S)</value>
   </data>
   <data name="Action_Print" xml:space="preserve">
-    <value>Chop etish (Ctrl+P) — keyingi bosqichda</value>
+    <value>Chop etish (Ctrl+P)</value>
   </data>
   <data name="Action_Close" xml:space="preserve">
     <value>Yopish (Esc)</value>
@@ -304,5 +304,160 @@ Skrinshot olib, «Saqlash» tugmasini bosing (Ctrl+S) yoki Shift+PrintScreen bil
   </data>
   <data name="History_FileMissing" xml:space="preserve">
     <value>Fayl topilmadi — u o'chirilgan yoki ko'chirilgan bo'lishi mumkin.</value>
+  </data>
+  <data name="Print_Title" xml:space="preserve">
+    <value>Chop etish — Skrinshot UZ</value>
+  </data>
+  <data name="Print_ModeHeader" xml:space="preserve">
+    <value>Qanday chop etilsin?</value>
+  </data>
+  <data name="Print_ModeFull" xml:space="preserve">
+    <value>A4 to'liq varaq</value>
+  </data>
+  <data name="Print_ModeFull_Tip" xml:space="preserve">
+    <value>Rasm butun A4 varaqqa — proporsiyasi buzilmasdan, eng katta o'lchamda.</value>
+  </data>
+  <data name="Print_ModeHalf" xml:space="preserve">
+    <value>A4 yarmi</value>
+  </data>
+  <data name="Print_ModeHalf_Tip" xml:space="preserve">
+    <value>Rasm varaqning yuqori yarmiga (210 × 148,5 mm).</value>
+  </data>
+  <data name="Print_ModeTwo" xml:space="preserve">
+    <value>Bir varaqqa 2 ta</value>
+  </data>
+  <data name="Print_ModeTwo_Tip" xml:space="preserve">
+    <value>Varaqning yuqori va pastki yarmiga; o'rtada qirqish uchun punktir chiziq.</value>
+  </data>
+  <data name="Print_ModeActual" xml:space="preserve">
+    <value>Asl o'lchamda</value>
+  </data>
+  <data name="Print_ModeActual_Tip" xml:space="preserve">
+    <value>Ekranda qanday kattalikda ko'ringan bo'lsa, qog'ozda ham shunday.</value>
+  </data>
+  <data name="Print_SecondImage" xml:space="preserve">
+    <value>Pastki yarmida:</value>
+  </data>
+  <data name="Print_SecondSame" xml:space="preserve">
+    <value>Xuddi shu rasm</value>
+  </data>
+  <data name="Print_Overflow" xml:space="preserve">
+    <value>Rasm asl o'lchamda ({0}) A4 varaqqa sig'maydi. Nima qilamiz?</value>
+  </data>
+  <data name="Print_OverflowFit" xml:space="preserve">
+    <value>Varaqqa sig'dirish (kichraytirish)</value>
+  </data>
+  <data name="Print_OverflowSplit" xml:space="preserve">
+    <value>Bir nechta varaqqa bo'lish</value>
+  </data>
+  <data name="Print_Orientation" xml:space="preserve">
+    <value>Varaq:</value>
+  </data>
+  <data name="Print_OrientationAuto" xml:space="preserve">
+    <value>Avtomatik</value>
+  </data>
+  <data name="Print_OrientationPortrait" xml:space="preserve">
+    <value>Kitob (tik)</value>
+  </data>
+  <data name="Print_OrientationLandscape" xml:space="preserve">
+    <value>Albom (yotiq)</value>
+  </data>
+  <data name="Print_Margin" xml:space="preserve">
+    <value>Maydon:</value>
+  </data>
+  <data name="Print_MarginValue" xml:space="preserve">
+    <value>{0} mm</value>
+  </data>
+  <data name="Print_Grayscale" xml:space="preserve">
+    <value>Oq-qora (rangli siyohni tejash)</value>
+  </data>
+  <data name="Print_ShowDate" xml:space="preserve">
+    <value>Rasm ostiga sana</value>
+  </data>
+  <data name="Print_TitleLabel" xml:space="preserve">
+    <value>Sarlavha (rasm ostida):</value>
+  </data>
+  <data name="Print_TitlePlaceholder" xml:space="preserve">
+    <value>masalan: 7-B sinf, Algebra</value>
+  </data>
+  <data name="Print_Copies" xml:space="preserve">
+    <value>Nusxalar soni:</value>
+  </data>
+  <data name="Print_Printer" xml:space="preserve">
+    <value>Printer:</value>
+  </data>
+  <data name="Print_NoPrinters" xml:space="preserve">
+    <value>Printer topilmadi</value>
+  </data>
+  <data name="Print_Print" xml:space="preserve">
+    <value>Chop etish</value>
+  </data>
+  <data name="Print_Print_Tip" xml:space="preserve">
+    <value>Tanlangan printerga yuborish (Enter)</value>
+  </data>
+  <data name="Print_Pdf" xml:space="preserve">
+    <value>PDF ga saqlash</value>
+  </data>
+  <data name="Print_Pdf_Tip" xml:space="preserve">
+    <value>Qog'ozga emas, PDF faylga saqlash (Microsoft Print to PDF)</value>
+  </data>
+  <data name="Print_Cancel" xml:space="preserve">
+    <value>Bekor qilish</value>
+  </data>
+  <data name="Print_SizeInfo" xml:space="preserve">
+    <value>Rasm qog'ozda: {0} · asl o'lchamning {1}%</value>
+  </data>
+  <data name="Print_SizeInfoActual" xml:space="preserve">
+    <value>Rasm qog'ozda: {0} · asl o'lchamda</value>
+  </data>
+  <data name="Print_PagesInfo" xml:space="preserve">
+    <value>A4 {0} · {1} varaq</value>
+  </data>
+  <data name="Print_CopiesSuffix" xml:space="preserve">
+    <value> × {0} nusxa</value>
+  </data>
+  <data name="Print_Portrait" xml:space="preserve">
+    <value>kitob</value>
+  </data>
+  <data name="Print_Landscape" xml:space="preserve">
+    <value>albom</value>
+  </data>
+  <data name="Print_PageOf" xml:space="preserve">
+    <value>{0} / {1}</value>
+  </data>
+  <data name="Print_PrevPage" xml:space="preserve">
+    <value>Oldingi varaq</value>
+  </data>
+  <data name="Print_NextPage" xml:space="preserve">
+    <value>Keyingi varaq</value>
+  </data>
+  <data name="Print_Sent" xml:space="preserve">
+    <value>Chop etishga yuborildi: {0}</value>
+  </data>
+  <data name="Print_Failed" xml:space="preserve">
+    <value>Chop etib bo'lmadi: {0}</value>
+  </data>
+  <data name="Print_PdfSaved" xml:space="preserve">
+    <value>PDF saqlandi: {0}
+Papkada ko'rish uchun shu xabarni bosing.</value>
+  </data>
+  <data name="Print_PdfMissing" xml:space="preserve">
+    <value>"Microsoft Print to PDF" printeri topilmadi.
+Uni Windows sozlamalari → Bluetooth va qurilmalar → Printerlar bo'limida qo'shish mumkin.</value>
+  </data>
+  <data name="Print_PdfDialogTitle" xml:space="preserve">
+    <value>PDF ga saqlash</value>
+  </data>
+  <data name="Print_PdfFilter" xml:space="preserve">
+    <value>PDF hujjat</value>
+  </data>
+  <data name="Print_LoadFailed" xml:space="preserve">
+    <value>Rasmni ochib bo'lmadi — fayl o'chirilgan yoki buzilgan bo'lishi mumkin.</value>
+  </data>
+  <data name="History_Print" xml:space="preserve">
+    <value>Chop etish</value>
+  </data>
+  <data name="Print_PagesCount" xml:space="preserve">
+    <value>{0} varaq</value>
   </data>
 </root>
