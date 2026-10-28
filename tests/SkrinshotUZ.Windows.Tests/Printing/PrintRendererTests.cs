@@ -267,8 +267,10 @@ public class PrintRendererTests
         var guides = DarkBounds(preview, threshold: 235);
         AssertMm(new RectMm(10, 10, 190, 277), guides);
         // Yuqori maydon chizig'i (y = 10 mm) — rasmdan tashqarida (rasm 53.5 mm dan boshlanadi).
-        Assert.True(preview.GetPixel(MmToPx(100), MmToPx(10)).R < 235, "ko'rinishda maydon chizig'i yo'q");
-        Assert.Equal(Color.White.ToArgb(), print.GetPixel(MmToPx(100), MmToPx(10)).ToArgb()); // printerda chegara chizilmaydi
+        // Punktir bo'lgani uchun bitta nuqta emas, 5 mm bo'lak tekshiriladi.
+        var span = Enumerable.Range(MmToPx(100), MmToPx(5)).ToList();
+        Assert.Contains(span, x => preview.GetPixel(x, MmToPx(10)).R < 235);
+        Assert.All(span, x => Assert.Equal(Color.White.ToArgb(), print.GetPixel(x, MmToPx(10)).ToArgb())); // printerda chegara chizilmaydi
     }
 
     [Fact]
