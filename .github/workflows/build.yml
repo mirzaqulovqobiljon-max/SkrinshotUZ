@@ -152,6 +152,9 @@ jobs:
             if (-not $p.WaitForExit(90000)) { $p.Kill(); throw "${rid}: dastur 90 soniyada yopilmadi" }
             if ($p.ExitCode -ne 0) {
               if (Test-Path $report) { Get-Content $report | Write-Host }
+              $crash = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Skrinshot UZ\logs') -Filter *.log -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1
+              if ($crash) { $t = (Get-Content $crash.FullName | Select-Object -First 25) -join '%0A'; Write-Host "::error title=${rid} xatolik logi::$t" }
+              if (Test-Path $report) { $t = (Get-Content $report | Where-Object { $_ -notmatch 'png=' } | Select-Object -First 25) -join '%0A'; Write-Host "::error title=${rid} hisobot::$t" }
               throw "${rid}: chiqish kodi $($p.ExitCode)"
             }
             if (-not (Test-Path $report)) { throw "${rid}: hisobot fayli yozilmadi" }
