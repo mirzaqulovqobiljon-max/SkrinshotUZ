@@ -417,7 +417,7 @@ jobs:
 
 
   server:
-    name: Supabase sxemasi — RLS va hisoblagich testlari (PostgreSQL)
+    name: Reklama serveri — sxema (PostgreSQL) va admin sahifa (brauzer) testlari
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -442,6 +442,14 @@ jobs:
           n=$(echo "$out" | grep -c "NOTICE:  o'tdi")
           echo "$out" | grep -q "BARCHA SXEMA TESTLARI O'TDI"
           echo "::notice title=Supabase sxemasi::$n ta tekshiruv o'tdi (RLS, huquqlar, hisoblagich, sanalar, cheklovlar)"
+
+      - name: Admin sahifa testlari (Chromium, soxta Supabase)
+        run: |
+          set -euo pipefail
+          pip install --quiet pytest==8.3.3 playwright==1.48.0
+          python -m playwright install --with-deps chromium > /dev/null
+          python -m pytest admin/tests -q -p no:cacheprovider 2>&1 | tee admin-tests.txt
+          echo "::notice title=Admin sahifa::$(tail -1 admin-tests.txt)"
 
   release:
     name: GitHub Release (faqat v* teglarida)
@@ -479,7 +487,7 @@ jobs:
 
           Windows "kompyuteringizni himoya qildi" desa: "Batafsil" → "Baribir ishga tushirish" (dastur raqamli imzosiz).
 
-          Dastur to'liq oflayn ishlaydi: hech qanday rasm internetga yuborilmaydi.
+          Skrinshotlar hech qachon internetga yuborilmaydi. Dastur kuniga bir marta (internet bo'lsa) kichik reklama oynasini ko'rsatadi.
           Fayllar butunligini tekshirish: \`SHA256SUMS.txt\`.
           NOTES
           # Release GitHub sahifasida qo'lda yaratilgan bo'lishi ham mumkin — unda fayllar unga qo'shiladi.

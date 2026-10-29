@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Skrinshot UZ — Reklama paneli</title>
+<!--
+  Skrinshot UZ reklama paneli — bitta fayl, tashqi kutubxonasiz.
+  O'rnatish: pastdagi SUPABASE_URL va SUPABASE_KEY ni o'zingiznikiga almashtiring va faylni saytingizga yuklang.
+  SUPABASE_KEY — OMMAVIY kalit (Project Settings → API Keys → "Publishable key" yoki eski "anon public").
+  HECH QACHON bu yerga "secret" yoki "service_role" kalitni qo'ymang.
+  Xavfsizlik: sahifani hamma ochishi mumkin, lekin faqat admins jadvalidagi foydalanuvchi reklamani o'zgartira oladi
+  (ruxsat Supabase'da — server/supabase.sql).
+-->
+<style>
+  :root {
+    --bg: #f4f6f9; --card: #fff; --text: #1d2430; --muted: #667085; --line: #dfe3ea;
+    --brand: #0067c0; --brand-dark: #00539c; --ok: #12805c; --ok-bg: #e5f6ef; --warn: #8a5a00; --warn-bg: #fff3d6;
+    --off: #6b7280; --off-bg: #eef0f3; --danger: #c0262d; --danger-bg: #fdecec; --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; color: var(--text); background: var(--bg); }
+  header { background: var(--card); border-bottom: 1px solid var(--line); }
+  .bar { max-width: 1100px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+  .bar h1 { font-size: 18px; margin: 0; flex: 1; }
+  .bar .who { color: var(--muted); font-size: 13px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .login { max-width: 380px; margin: 60px auto; }
+  .login h2 { margin: 0 0 4px; }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; font-size: 14px; }
+  .hint { color: var(--muted); font-size: 13px; font-weight: 400; }
+  input[type=text], input[type=email], input[type=password], input[type=url], input[type=date], input[type=number] {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; color: var(--text);
+  }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--text); padding: 8px 14px; cursor: pointer; }
+  button:hover { background: #f2f4f7; }
+  button.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+  button.primary:hover { background: var(--brand-dark); }
+  button.danger { color: var(--danger); border-color: #f1c4c6; }
+  button.danger:hover { background: var(--danger-bg); }
+  button:disabled { opacity: .55; cursor: default; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 160px; }
+  .msg { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+  .msg.error { background: var(--danger-bg); color: var(--danger); }
+  .msg.info { background: #e8f1fb; color: var(--brand-dark); }
+  .msg:empty { display: none; }
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar h2 { margin: 0; flex: 1; font-size: 20px; }
+  .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .totals .card { padding: 14px 16px; }
+  .totals .n { font-size: 26px; font-weight: 700; }
+  .totals .t { color: var(--muted); font-size: 13px; }
+  .ads { display: grid; gap: 12px; }
+  .ad { display: grid; grid-template-columns: 150px 1fr auto; gap: 16px; align-items: start; }
+  .thumb { width: 150px; height: 84px; border-radius: 8px; background: #e9edf2 center/cover no-repeat; border: 1px solid var(--line); display: grid; place-items: center; color: var(--muted); font-size: 12px; }
+  .ad h3 { margin: 0 0 4px; font-size: 16px; word-break: break-word; }
+  .ad .link { color: var(--brand); font-size: 13px; word-break: break-all; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .stats { display: flex; gap: 14px; margin-top: 8px; font-size: 13px; flex-wrap: wrap; }
+  .stats b { font-size: 15px; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-left: 6px; vertical-align: 2px; }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.off { background: var(--off-bg); color: var(--off); }
+  .actions { display: flex; flex-direction: column; gap: 6px; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; }
+  dialog { border: none; border-radius: 14px; padding: 0; width: min(860px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(20, 28, 40, .45); }
+  .dlg { display: grid; grid-template-columns: 1fr 360px; }
+  .dlg form { padding: 22px; }
+  .dlg h2 { margin: 0 0 4px; }
+  .side { background: #eef1f5; padding: 22px; border-left: 1px solid var(--line); }
+  .side h3 { margin: 0 0 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
+  .preview { width: 100%; background: #fff; border: 1px solid #bec4cc; font-family: "Segoe UI", sans-serif; }
+  .preview .ph { display: flex; align-items: center; gap: 6px; background: #f5f7fa; padding: 7px 8px; font-size: 12px; color: #464646; }
+  .preview .ph .rb { background: #fff1c4; color: #785a00; padding: 1px 5px; }
+  .preview .ph .x { margin-left: auto; color: #333; }
+  .preview .pb { padding: 10px 12px; }
+  .preview img { width: 100%; max-height: 190px; object-fit: contain; display: block; margin-bottom: 8px; }
+  .preview .pt { font-weight: 700; font-size: 14px; margin-bottom: 10px; word-break: break-word; }
+  .preview .pbtn { display: inline-block; padding: 6px 14px; font-size: 13px; margin-right: 6px; border: 1px solid #bbb; }
+  .preview .pbtn.more { background: #0067c0; border-color: #0067c0; color: #fff; font-weight: 700; }
+  .check { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-top: 14px; }
+  .count { float: right; font-weight: 400; color: var(--muted); font-size: 12px; }
+  .footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .note { color: var(--muted); font-size: 13px; margin-top: 18px; line-height: 1.5; }
+  [hidden] { display: none !important; }
+  @media (max-width: 760px) {
+    .dlg { grid-template-columns: 1fr; }
+    .side { border-left: none; border-top: 1px solid var(--line); }
+    .ad { grid-template-columns: 1fr; }
+    .thumb { width: 100%; height: 140px; }
+    .actions { flex-direction: row; flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>Skrinshot UZ — Reklama paneli</h1>
+    <span class="who" id="who"></span>
+    <button id="logout" hidden>Chiqish</button>
+  </div>
+</header>
+
+<main>
+  <!-- Sozlanmagan -->
+  <section id="setup" class="card login" hidden>
+    <h2>Sozlash kerak</h2>
+    <p>Fayl ichidagi <code>SUPABASE_URL</code> va <code>SUPABASE_KEY</code> qiymatlarini Supabase loyihangiznikiga almashtiring
+      (Project Settings → API). Faqat <b>ommaviy</b> kalit: "Publishable key" yoki "anon public".</p>
+  </section>
+
+  <!-- Kirish -->
+  <section id="login" class="card login" hidden>
+    <h2>Kirish</h2>
+    <p class="hint">Faqat administrator uchun.</p>
+    <form id="loginForm" novalidate>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" required>
+      <label for="password">Parol</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <div class="footer"><button class="primary" type="submit" id="loginBtn">Kirish</button></div>
+      <p class="msg error" id="loginError" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- Panel -->
+  <section id="panel" hidden>
+    <div class="totals">
+      <div class="card"><div class="n" id="tActive">0</div><div class="t">Hozir faol reklamalar</div></div>
+      <div class="card"><div class="n" id="tViews">0</div><div class="t">Jami ko'rishlar</div></div>
+      <div class="card"><div class="n" id="tClicks">0</div><div class="t">Jami bosishlar</div></div>
+      <div class="card"><div class="n" id="tViews7">0</div><div class="t">Ko'rishlar (oxirgi 7 kun)</div></div>
+    </div>
+    <div class="toolbar">
+      <h2>Reklamalar</h2>
+      <button id="refresh">Yangilash</button>
+      <button class="primary" id="add">+ Yangi reklama</button>
+    </div>
+    <p class="msg error" id="panelError" role="alert"></p>
+    <div class="ads" id="ads"></div>
+    <p class="note">Dastur kuniga bir marta (ishga tushganda, internet bo'lsa) faol reklamalardan navbatdagisini ko'rsatadi.
+      Bir nechta faol reklama bo'lsa — har kuni boshqasi chiqadi (ustuvorligi yuqorisidan boshlab).
+      Statistika faqat umumiy sonlar: kim ko'rgani saqlanmaydi.</p>
+  </section>
+</main>
+
+<!-- Qo'shish / tahrirlash -->
+<dialog id="editor">
+  <div class="dlg">
+    <form id="adForm" method="dialog" novalidate>
+      <h2 id="formTitle">Yangi reklama</h2>
+      <label for="fTitle">Sarlavha <span class="count" id="titleCount">0/120</span></label>
+      <input id="fTitle" type="text" maxlength="120" required placeholder="masalan: Ingliz tili kursi — 20% chegirma">
+
+      <label for="fLink">Havola <span class="hint">("Batafsil" tugmasi ochadi; https:// bilan)</span></label>
+      <input id="fLink" type="url" placeholder="https://t.me/kanalingiz">
+
+      <label for="fImage">Rasm <span class="hint">(PNG yoki JPG, 2 MB gacha; tavsiya: 720×300)</span></label>
+      <input id="fImage" type="file" accept="image/png,image/jpeg">
+      <div class="row" style="margin-top:6px">
+        <button type="button" id="removeImage" hidden>Rasmni olib tashlash</button>
+      </div>
+
+      <div class="row">
+        <div><label for="fStart">Boshlanish sanasi</label><input id="fStart" type="date"></div>
+        <div><label for="fEnd">Tugash sanasi</label><input id="fEnd" type="date"></div>
+      </div>
+      <p class="hint">Bo'sh qoldirilsa — muddatsiz. Sanalar Toshkent vaqti bo'yicha.</p>
+
+      <label for="fPriority">Ustuvorlik <span class="hint">(−100 … 100; kattasi oldin chiqadi)</span></label>
+      <input id="fPriority" type="number" min="-100" max="100" step="1" value="0">
+
+      <label class="check"><input id="fActive" type="checkbox" checked> Faol (dasturda ko'rsatilsin)</label>
+
+      <p class="msg error" id="formError" role="alert"></p>
+      <div class="footer">
+        <button type="button" id="cancel">Bekor qilish</button>
+        <button class="primary" type="submit" id="save">Saqlash</button>
+      </div>
+    </form>
+    <aside class="side">
+      <h3>Dasturda shunday ko'rinadi</h3>
+      <div class="preview" aria-label="Ko'rinish">
+        <div class="ph"><span>Skrinshot UZ</span><span class="rb">Reklama</span><span class="x">✕</span></div>
+        <div class="pb">
+          <img id="pImg" alt="" hidden>
+          <div class="pt" id="pTitle">Sarlavha</div>
+          <span class="pbtn more" id="pMore">Batafsil</span><span class="pbtn">Yopish</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+// ======================= SOZLAMA (o'zgartiring) =======================
+const SUPABASE_URL = "https://SIZNING-LOYIHA.supabase.co";
+const SUPABASE_KEY = "SIZNING-OMMAVIY-KALITINGIZ";
+// ======================================================================
+
+const BUCKET = "ad-images";
+const MAX_IMAGE = 2 * 1024 * 1024;
+const $ = (id) => document.getElementById(id);
+const configured = /^https:\/\/[^\s]+$/.test(SUPABASE_URL) && !SUPABASE_URL.includes("SIZNING") && SUPABASE_KEY && !SUPABASE_KEY.includes("SIZNING");
+const BASE = SUPABASE_URL.replace(/\/+$/, "");
+
+let session = loadSession();
+let ads = [];
+let report = new Map();
+let editing = null;       // tahrirlanayotgan reklama (yoki null — yangi)
+let pendingFile = null;   // tanlangan yangi rasm
+let removeImage = false;
+
+// ---------- Sessiya (faqat shu brauzer oynasida, yopilsa o'chadi) ----------
+function loadSession() {
+  try { return JSON.parse(sessionStorage.getItem("skuz.session") || "null"); } catch { return null; }
+}
+function saveSession(s) {
+  session = s;
+  try { s ? sessionStorage.setItem("skuz.session", JSON.stringify(s)) : sessionStorage.removeItem("skuz.session"); } catch { /* xususiy rejim */ }
+}
+
+// ---------- Supabase so'rovlari ----------
+function headers(extra) {
+  const h = { apikey: SUPABASE_KEY, ...extra };
+  if (session) h.Authorization = "Bearer " + session.access_token;
+  return h;
+}
+
+async function errorText(res) {
+  let body = null;
+  try { body = await res.json(); } catch { /* bo'sh javob */ }
+  const raw = body && (body.msg || body.message || body.error_description || body.error) || ("HTTP " + res.status);
+  return translate(String(raw), res.status, body && body.code);
+}
+
+function translate(raw, status, code) {
+  if (/invalid login credentials/i.test(raw)) return "Email yoki parol noto'g'ri.";
+  if (/email not confirmed/i.test(raw)) return "Email tasdiqlanmagan. Supabase'da foydalanuvchini \"Auto Confirm\" bilan yarating.";
+  if (code === "42501" || status === 403 || /row-level security/i.test(raw)) return "Ruxsat yo'q: bu hisob admin emas.";
+  if (code === "23514" || /check constraint/i.test(raw)) return "Ma'lumot noto'g'ri (havola https bilan, sanalar va ustuvorlik chegarasini tekshiring).";
+  if (/payload too large|exceeded the maximum/i.test(raw) || status === 413) return "Rasm juda katta (2 MB gacha).";
+  if (/mime type/i.test(raw)) return "Faqat PNG yoki JPG rasm yuklash mumkin.";
+  return raw;
+}
+
+async function api(path, opts = {}, retried = false) {
+  let res;
+  try {
+    res = await fetch(BASE + path, { ...opts, headers: headers(opts.headers) });
+  } catch {
+    throw new Error("Internetga ulanib bo'lmadi. Aloqani tekshirib, qayta urinib ko'ring.");
+  }
+  if (res.status === 401 && session && !retried) {
+    if (await refresh()) return api(path, opts, true);
+    logout("Sessiya muddati tugadi — qaytadan kiring.");
+    throw new Error("Sessiya muddati tugadi.");
+  }
+  if (!res.ok) throw new Error(await errorText(res));
+  if (res.status === 204) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function refresh() {
+  try {
+    const res = await fetch(BASE + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST",
+      headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: session.refresh_token }),
+    });
+    if (!res.ok) return false;
+    const s = await res.json();
+    saveSession({ access_token: s.access_token, refresh_token: s.refresh_token, email: session.email });
+    return true;
+  } catch { return false; }
+}
+
+// ---------- Kirish / chiqish ----------
+async function login(email, password) {
+  let res;
+  try {
+    res = await fetch(BASE + "/auth/v1/token?grant_type=password", {
+      method: "POST",
+      headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new Error("Internetga ulanib bo'lmadi.");
+  }
+  if (!res.ok) throw new Error(await errorText(res));
+  const s = await res.json();
+  saveSession({ access_token: s.access_token, refresh_token: s.refresh_token, email: (s.user && s.user.email) || email });
+  const isAdmin = await api("/rest/v1/rpc/is_admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  if (isAdmin !== true) {
+    saveSession(null);
+    throw new Error("Bu hisob admin emas. Supabase SQL Editor'da uni admins jadvaliga qo'shing (qo'llanmaga qarang).");
+  }
+}
+
+function logout(message) {
+  saveSession(null);
+  show();
+  if (message) $("loginError").textContent = message;
+}
+
+// ---------- Sana va holat ----------
+function tashkentToday() {
+  // Server ham Toshkent sanasi bilan ishlaydi (sv-SE formati: YYYY-MM-DD).
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tashkent" });
+}
+
+function status(ad) {
+  const today = tashkentToday();
+  if (!ad.is_active) return { text: "O'chirilgan", cls: "off" };
+  if (ad.starts_on && ad.starts_on > today) return { text: "Rejalashtirilgan", cls: "warn" };
+  if (ad.ends_on && ad.ends_on < today) return { text: "Muddati o'tgan", cls: "off" };
+  return { text: "Faol", cls: "ok" };
+}
+
+function fmtDate(d) {
+  if (!d) return null;
+  const [y, m, day] = d.split("-");
+  return `${day}.${m}.${y}`;
+}
+
+function fmtNum(n) {
+  return Number(n || 0).toLocaleString("ru-RU").replace(/ /g, " ");
+}
+
+// ---------- Ro'yxat ----------
+async function load() {
+  $("panelError").textContent = "";
+  try {
+    const [list, rep] = await Promise.all([
+      api("/rest/v1/ads?select=*&order=priority.desc,created_at.desc"),
+      api("/rest/v1/rpc/ad_report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ p_days: 7 }) }),
+    ]);
+    ads = list || [];
+    report = new Map((rep || []).map((r) => [r.ad_id, r]));
+    render();
+  } catch (e) {
+    $("panelError").textContent = e.message;
+  }
+}
+
+function el(tag, props, ...children) {
+  const n = document.createElement(tag);
+  Object.assign(n, props || {});
+  for (const c of children) if (c != null) n.append(c);
+  return n;
+}
+
+function render() {
+  const box = $("ads");
+  box.replaceChildren();
+  let views = 0, clicks = 0, views7 = 0, active = 0;
+  for (const ad of ads) {
+    const r = report.get(ad.id) || {};
+    views += Number(r.views_total || 0); clicks += Number(r.clicks_total || 0); views7 += Number(r.views_recent || 0);
+    const st = status(ad);
+    if (st.cls === "ok") active++;
+
+    const thumb = el("div", { className: "thumb" });
+    if (ad.image_url) thumb.style.backgroundImage = `url("${encodeURI(ad.image_url).replace(/"/g, "%22")}")`;
+    else thumb.textContent = "Rasmsiz";
+
+    const title = el("h3", {}, ad.title, el("span", { className: "badge " + st.cls, textContent: st.text }));
+    const link = ad.link_url ? el("a", { className: "link", href: ad.link_url, target: "_blank", rel: "noopener noreferrer", textContent: ad.link_url }) : el("span", { className: "meta", textContent: "Havolasiz" });
+    const period = [ad.starts_on ? fmtDate(ad.starts_on) + " dan" : null, ad.ends_on ? fmtDate(ad.ends_on) + " gacha" : null].filter(Boolean).join(" ") || "Muddatsiz";
+    const meta = el("div", { className: "meta", textContent: `${period} · ustuvorlik ${ad.priority}` });
+    const ctr = r.views_total ? ((Number(r.clicks_total) / Number(r.views_total)) * 100).toFixed(1).replace(".", ",") + "%" : "—";
+    const stats = el("div", { className: "stats" },
+      el("span", {}, "Ko'rishlar: ", el("b", { textContent: fmtNum(r.views_total) })),
+      el("span", {}, "Bosishlar: ", el("b", { textContent: fmtNum(r.clicks_total) })),
+      el("span", {}, "Bosish ulushi: ", el("b", { textContent: ctr })),
+      el("span", {}, "7 kun: ", el("b", { textContent: `${fmtNum(r.views_recent)} / ${fmtNum(r.clicks_recent)}` })));
+
+    const editBtn = el("button", { textContent: "Tahrirlash", onclick: () => openEditor(ad) });
+    const toggleBtn = el("button", { textContent: ad.is_active ? "O'chirib qo'yish" : "Yoqish", onclick: () => toggle(ad) });
+    const delBtn = el("button", { className: "danger", textContent: "O'chirish", onclick: () => remove(ad) });
+    box.append(el("article", { className: "card ad" }, thumb, el("div", {}, title, link, meta, stats), el("div", { className: "actions" }, editBtn, toggleBtn, delBtn)));
+  }
+  if (!ads.length) box.append(el("div", { className: "card empty", textContent: "Hali reklama yo'q. \"+ Yangi reklama\" tugmasini bosing." }));
+  $("tActive").textContent = fmtNum(active);
+  $("tViews").textContent = fmtNum(views);
+  $("tClicks").textContent = fmtNum(clicks);
+  $("tViews7").textContent = fmtNum(views7);
+}
+
+async function toggle(ad) {
+  try {
+    await api(`/rest/v1/ads?id=eq.${encodeURIComponent(ad.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ is_active: !ad.is_active }) });
+    await load();
+  } catch (e) { $("panelError").textContent = e.message; }
+}
+
+async function remove(ad) {
+  if (!confirm(`"${ad.title}" reklamasi va uning statistikasi butunlay o'chirilsinmi?`)) return;
+  try {
+    await api(`/rest/v1/ads?id=eq.${encodeURIComponent(ad.id)}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+    await deleteStoredImage(ad.image_url);
+    await load();
+  } catch (e) { $("panelError").textContent = e.message; }
+}
+
+// O'zimiz yuklagan rasmni ham o'chiramiz (boshqa saytdagi rasmga tegilmaydi). Xato bo'lsa — jim.
+async function deleteStoredImage(url) {
+  const prefix = `${BASE}/storage/v1/object/public/${BUCKET}/`;
+  if (!url || !url.startsWith(prefix)) return;
+  try { await api(`/storage/v1/object/${BUCKET}/${url.slice(prefix.length)}`, { method: "DELETE" }); } catch { /* jim */ }
+}
+
+// ---------- Tahrirlash oynasi ----------
+function openEditor(ad) {
+  editing = ad || null;
+  pendingFile = null;
+  removeImage = false;
+  $("formTitle").textContent = ad ? "Reklamani tahrirlash" : "Yangi reklama";
+  $("fTitle").value = ad ? ad.title : "";
+  $("fLink").value = ad && ad.link_url || "";
+  $("fStart").value = ad && ad.starts_on || "";
+  $("fEnd").value = ad && ad.ends_on || "";
+  $("fPriority").value = ad ? ad.priority : 0;
+  $("fActive").checked = ad ? ad.is_active : true;
+  $("fImage").value = "";
+  $("formError").textContent = "";
+  updatePreview();
+  $("editor").showModal();
+  $("fTitle").focus();
+}
+
+let previewUrl = null;     // tanlangan fayl uchun bitta blob: manzil (har harfda yangisi yaratilmasin)
+function currentImageSrc() {
+  if (pendingFile) return previewUrl || (previewUrl = URL.createObjectURL(pendingFile));
+  if (removeImage) return null;
+  return editing && editing.image_url || null;
+}
+
+function updatePreview() {
+  const t = $("fTitle").value.trim();
+  $("titleCount").textContent = `${$("fTitle").value.length}/120`;
+  $("pTitle").textContent = t || "Sarlavha";
+  $("pMore").hidden = !$("fLink").value.trim();
+  const src = currentImageSrc();
+  $("pImg").hidden = !src;
+  if (src) $("pImg").src = src; else $("pImg").removeAttribute("src");
+  $("removeImage").hidden = !src;
+}
+
+function validate() {
+  const title = $("fTitle").value.trim();
+  const link = $("fLink").value.trim();
+  const start = $("fStart").value, end = $("fEnd").value;
+  const priority = Number($("fPriority").value);
+  if (!title) return "Sarlavhani yozing.";
+  if (title.length > 120) return "Sarlavha 120 belgidan oshmasin.";
+  if (link) {
+    let u;
+    try { u = new URL(link); } catch { return "Havola noto'g'ri. To'liq yozing: https://..."; }
+    if (u.protocol !== "https:") return "Havola https:// bilan boshlanishi kerak (xavfsizlik uchun).";
+  }
+  if (start && end && end < start) return "Tugash sanasi boshlanish sanasidan oldin bo'lmasin.";
+  if (!Number.isInteger(priority) || priority < -100 || priority > 100) return "Ustuvorlik −100 dan 100 gacha butun son bo'lsin.";
+  if (pendingFile) {
+    if (!["image/png", "image/jpeg"].includes(pendingFile.type)) return "Faqat PNG yoki JPG rasm (dastur boshqa formatni ko'rsata olmaydi).";
+    if (pendingFile.size > MAX_IMAGE) return "Rasm 2 MB dan katta. Kichikroq rasm tanlang.";
+  }
+  return null;
+}
+
+async function uploadImage(file) {
+  const ext = file.type === "image/png" ? "png" : "jpg";
+  const name = `${crypto.randomUUID()}.${ext}`;
+  await api(`/storage/v1/object/${BUCKET}/${name}`, { method: "POST", headers: { "Content-Type": file.type, "x-upsert": "false", "cache-control": "31536000" }, body: file });
+  return `${BASE}/storage/v1/object/public/${BUCKET}/${name}`;
+}
+
+async function save(ev) {
+  ev.preventDefault();
+  const problem = validate();
+  $("formError").textContent = problem || "";
+  if (problem) return;
+  $("save").disabled = true;
+  $("save").textContent = "Saqlanmoqda…";
+  try {
+    const oldImage = editing && editing.image_url || null;
+    let image = removeImage ? null : oldImage;
+    if (pendingFile) image = await uploadImage(pendingFile);
+    const row = {
+      title: $("fTitle").value.trim(),
+      link_url: $("fLink").value.trim() || null,
+      image_url: image,
+      starts_on: $("fStart").value || null,
+      ends_on: $("fEnd").value || null,
+      priority: Number($("fPriority").value),
+      is_active: $("fActive").checked,
+    };
+    if (editing) {
+      await api(`/rest/v1/ads?id=eq.${encodeURIComponent(editing.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(row) });
+    } else {
+      await api("/rest/v1/ads", { method: "POST", headers: { "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(row) });
+    }
+    if (oldImage && oldImage !== image) await deleteStoredImage(oldImage);
+    $("editor").close();
+    await load();
+  } catch (e) {
+    $("formError").textContent = e.message;
+  } finally {
+    $("save").disabled = false;
+    $("save").textContent = "Saqlash";
+  }
+}
+
+// ---------- Ekranlar ----------
+function show() {
+  $("setup").hidden = configured;
+  $("login").hidden = !configured || !!session;
+  $("panel").hidden = !configured || !session;
+  $("logout").hidden = !session;
+  $("who").textContent = session ? session.email : "";
+  if (configured && session) load();
+}
+
+$("loginForm").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  $("loginError").textContent = "";
+  const email = $("email").value.trim(), password = $("password").value;
+  if (!email || !password) { $("loginError").textContent = "Email va parolni kiriting."; return; }
+  $("loginBtn").disabled = true;
+  try {
+    await login(email, password);
+    $("password").value = "";
+    show();
+  } catch (e) {
+    $("loginError").textContent = e.message;
+  } finally {
+    $("loginBtn").disabled = false;
+  }
+});
+$("logout").addEventListener("click", () => logout());
+$("refresh").addEventListener("click", load);
+$("add").addEventListener("click", () => openEditor(null));
+$("cancel").addEventListener("click", () => $("editor").close());
+$("adForm").addEventListener("submit", save);
+for (const id of ["fTitle", "fLink"]) $(id).addEventListener("input", updatePreview);
+function releasePreview() {
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = null;
+}
+$("editor").addEventListener("close", releasePreview);
+$("fImage").addEventListener("change", () => {
+  releasePreview();
+  pendingFile = $("fImage").files[0] || null;
+  removeImage = false;
+  $("formError").textContent = pendingFile ? (validate() || "") : "";
+  updatePreview();
+});
+$("removeImage").addEventListener("click", () => {
+  releasePreview();
+  pendingFile = null;
+  removeImage = true;
+  $("fImage").value = "";
+  updatePreview();
+});
+
+show();
+</script>
+</body>
+</html>

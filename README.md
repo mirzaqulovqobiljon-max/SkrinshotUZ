@@ -2,7 +2,7 @@
 
 O'zbek maktablari uchun Windows skrinshot dasturi (Lightshot analogi). **PrintScreen** tugmasini bosing, ekranning kerakli qismini tanlang, ustiga chizing va saqlang, nusxa oling yoki chop eting.
 
-- **To'liq oflayn.** Hech qanday rasm internetga yuborilmaydi (bolalar ma'lumoti xavfsizligi).
+- **Skrinshotlar hech qachon internetga yuborilmaydi** (bolalar ma'lumoti xavfsizligi). Barcha ish — kompyuterning o'zida.
 - **Interfeys to'liq o'zbek tilida.**
 - **Windows 10 va 11**, 64-bit va 32-bit.
 - **Kompyuterga .NET o'rnatish shart emas.**
@@ -92,9 +92,22 @@ Chop etish oynasida chapda sozlamalar, o'ngda esa A4 varaq qanday chiqishi ko'ri
 - **Qirqish vositasi:** agar PrintScreen sozlamasini Skrinshot UZ o'chirgan bo'lsa, uni qaytarish **so'raladi**.
 - **Qoladi:** saqlangan skrinshotlaringiz (`Rasmlar\Skrinshot UZ`) hech qachon o'chirilmaydi.
 
+### Reklama
+
+1.1.0 versiyadan boshlab dastur kuniga **bir marta** (ishga tushganda, agar internet bo'lsa) ekranning pastki o'ng
+burchagida kichik reklama oynasini ko'rsatadi. Oyna "Reklama" deb belgilangan, hech qachon ish oynangizni to'smaydi
+(fokusni olmaydi), "Yopish" tugmasi bilan yopiladi va 60 soniyadan keyin o'zi yo'qoladi. Skrinshot olinayotganda u
+yashiriladi, ya'ni rasmga tushmaydi. Internet bo'lmasa, hech narsa chiqmaydi va dastur odatdagidek ishlayveradi.
+
 ### Maxfiylik
 
-- Dastur internetga umuman ulanmaydi va yangilanishlarni ham o'zi tekshirmaydi.
+- **Skrinshotlar, fayllar va kompyuter haqidagi ma'lumot hech qachon internetga yuborilmaydi.**
+- Internetga faqat reklama uchun chiqiladi (kuniga bir marta):
+  - reklamalar ro'yxati va rasmi yuklab olinadi;
+  - serverga faqat "N-reklama ko'rildi" yoki "bosildi" degan umumiy hisoblagich yuboriladi.
+
+  Foydalanuvchi, kompyuter nomi yoki biror identifikator yuborilmaydi; server faqat umumiy sonlarni saqlaydi. Har qanday internet so'rovidagi kabi, server IP manzilni ko'radi, lekin uni saqlamaydi.
+- Dastur yangilanishlarni o'zi tekshirmaydi.
 - Rasmlar faqat siz tanlagan papkada saqlanadi.
 - Sozlamalar `%APPDATA%\Skrinshot UZ` papkasida turadi.
 - Xatolik bo'lsa, `logs` papkasiga faqat texnik ma'lumot yoziladi (rasm emas).
@@ -143,6 +156,18 @@ CI har safar quyidagilarni tekshiradi:
 - skrinshot → chizma → bufer → PNG/JPG → tarix → chop etish → haqiqiy PDF zanjiri ishlaydi;
 - `Uzbek.isl` o'rnatilgan Inno Setup versiyasiga to'liq mos;
 - o'rnatuvchi administratorsiz o'rnatadi, ishlab turgan dasturni yangilashda o'zi yopadi va o'chirganda skrinshotlarni qoldiradi.
+
+### Reklama tizimi
+
+To'liq sozlash qo'llanmasi: [docs/reklama-sozlash.md](docs/reklama-sozlash.md).
+
+- `server/supabase.sql` — Supabase sxemasi: jadvallar, huquqlar (RLS), hisoblagich.
+- `admin/reklama-admin.html` — admin sahifa (bitta fayl, saytga yuklanadi).
+- Dasturga Supabase manzili va **ommaviy** kaliti GitHub Variables orqali beriladi: `ADS_SUPABASE_URL`, `ADS_SUPABASE_KEY`. Bo'sh bo'lsa, reklama o'chiq va dastur internetga umuman chiqmaydi.
+- Testlar:
+  - `server/tests` — PostgreSQL'da 42 ta huquq tekshiruvi;
+  - `admin/tests` — Chromium'da 16 ta admin sahifa testi;
+  - `tests/…/Ads` — dastur qismi.
 
 ### Mahalliy yig'ish (Windows, .NET 8 SDK)
 
