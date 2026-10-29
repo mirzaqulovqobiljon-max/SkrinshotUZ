@@ -41,6 +41,16 @@
     <RuntimeHostConfigurationOption Include="System.Globalization.UseNls" Value="true" />
   </ItemGroup>
 
+  <!--
+    Reklama serveri (Supabase): manzil va OMMAVIY kalit yig'ish vaqtida beriladi —
+    CI'da GitHub → Settings → Secrets and variables → Actions → Variables: ADS_SUPABASE_URL, ADS_SUPABASE_KEY.
+    Bo'sh bo'lsa reklama o'chiq va dastur internetga umuman chiqmaydi.
+  -->
+  <ItemGroup>
+    <AssemblyMetadata Include="AdsSupabaseUrl" Value="$(AdsSupabaseUrl)" />
+    <AssemblyMetadata Include="AdsSupabaseKey" Value="$(AdsSupabaseKey)" />
+  </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Resources\app.ico" LogicalName="SkrinshotUZ.app.ico" />
   </ItemGroup>

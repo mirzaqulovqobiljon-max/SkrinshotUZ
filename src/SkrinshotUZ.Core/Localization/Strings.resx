@@ -460,4 +460,16 @@ Uni Windows sozlamalari → Bluetooth va qurilmalar → Printerlar bo'limida qo'
   <data name="Print_PagesCount" xml:space="preserve">
     <value>{0} varaq</value>
   </data>
+  <data name="Ads_Label" xml:space="preserve">
+    <value>Reklama</value>
+  </data>
+  <data name="Ads_More" xml:space="preserve">
+    <value>Batafsil</value>
+  </data>
+  <data name="Ads_MoreTip" xml:space="preserve">
+    <value>Saytni brauzerda ochish</value>
+  </data>
+  <data name="Ads_Close" xml:space="preserve">
+    <value>Yopish</value>
+  </data>
 </root>

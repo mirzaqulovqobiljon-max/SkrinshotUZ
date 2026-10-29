@@ -152,6 +152,15 @@ internal static class Shell
     /// <summary>Faylni standart dasturda ochadi (masalan, "Rasmlar" ilovasi).</summary>
     public static void Open(string path) => Start(new ProcessStartInfo(path) { UseShellExecute = true });
 
+    /// <summary>Havolani standart brauzerda ochadi (faqat https — boshqa hech narsa ishga tushirilmaydi).</summary>
+    public static void OpenUrl(string url)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps)
+        {
+            Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+        }
+    }
+
     /// <summary>Papkani ochib, faylni belgilaydi.</summary>
     public static void ShowInFolder(string path) =>
         Start(new ProcessStartInfo("explorer.exe", "/select,\"" + path + "\"") { UseShellExecute = true });

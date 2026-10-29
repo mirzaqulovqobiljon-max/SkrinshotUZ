@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using SkrinshotUZ.Ads;
 using SkrinshotUZ.Capture;
+using SkrinshotUZ.Core.Ads;
 using SkrinshotUZ.Core.Capture;
 using SkrinshotUZ.Core.Editing;
 using SkrinshotUZ.Core.Hotkeys;
@@ -58,6 +60,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private string? _smokeHistoryPreview;
     private string? _smokePrintResult;
     private string? _smokePrintPreview;
+    private string? _smokeAdPreview;
+    private readonly CancellationTokenSource _adsCts = new();
+    private System.Windows.Forms.Timer? _adsTimer;
+    private bool _adsRunning;
     private ScreenshotHistory _history = new();
     private JsonHistoryStore? _historyStore;
     private HistoryForm? _historyForm;
@@ -141,6 +147,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
             }
 
             lines.Add("print=" + (_smokePrintResult ?? "not-run"));
+            lines.Add("ads=" + (AdsConfig.Endpoint is null ? "off" : "configured " + AdsConfig.Endpoint.BaseUrl.Host));
+            if (_smokeAdPreview is not null)
+            {
+                lines.Add("adview=" + _smokeAdPreview);
+            }
+
             if (_smokePrintPreview is not null)
             {
                 lines.Add("printview=" + _smokePrintPreview);
@@ -163,6 +175,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
         if (disposing)
         {
             _startupTimer.Dispose();
+            _adsCts.Cancel();
+            _adsTimer?.Dispose();
+            _adsCts.Dispose();
             _activateWait?.Unregister(null);
             _exitWait?.Unregister(null);
             _hotkeys?.Dispose();
@@ -223,8 +238,90 @@ internal sealed class TrayApplicationContext : ApplicationContext
             ShowBalloon(Strings.Tray_Started, ToolTipIcon.Info);
         }
 
+        StartAds();
+
         // Ishga tushish tugadi — endi dastur tray'da jim kutadi.
         MemoryTrimmer.Trim();
+    }
+
+    // ---------- Reklama ----------
+
+    /// <summary>
+    /// Ishga tushgandan 20 soniya keyin (ruxsat oynalari va birinchi xabardan so'ng), keyin har soatda tekshiriladi —
+    /// reklama kuniga ko'pi bilan bir marta ko'rsatiladi. Sozlanmagan bo'lsa dastur internetga umuman chiqmaydi.
+    /// </summary>
+    private void StartAds()
+    {
+        if (AdsConfig.Endpoint is null)
+        {
+            return;
+        }
+
+        _adsTimer = new System.Windows.Forms.Timer { Interval = 20_000 };
+        _adsTimer.Tick += async (_, _) => await RunAdsAsync();
+        _adsTimer.Start();
+    }
+
+    private async Task RunAdsAsync()
+    {
+        if (_adsRunning || _permissions is null || _adsTimer is null || AdsConfig.Endpoint is not AdsEndpoint endpoint)
+        {
+            return;
+        }
+
+        if (IsBusyForAds())
+        {
+            _adsTimer.Interval = 60_000; // skrinshot yoki chop etish oynasi ochiq — bir daqiqadan keyin
+            return;
+        }
+
+        _adsRunning = true;
+        _adsTimer.Interval = 60 * 60 * 1000;
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            var coordinator = new AdCoordinator(
+                new SupabaseAdClient(http, endpoint),
+                new WindowsAdPresenter(),
+                new SettingsAdState(_permissions.Settings, _permissions.SaveSettings),
+                () => DateOnly.FromDateTime(DateTime.Now));
+            await coordinator.RunOnceAsync(_adsCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // dastur yopilmoqda
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException or ObjectDisposedException
+                                       or Win32Exception or ExternalException or ArgumentException)
+        {
+            // Reklama hech qachon dastur ishiga xalaqit bermaydi.
+        }
+        finally
+        {
+            _adsRunning = false;
+            MemoryTrimmer.Trim();
+        }
+    }
+
+    private bool IsBusyForAds() =>
+        _capturing || Application.OpenForms.Cast<Form>().Any(f => f is CaptureOverlayForm or PrintForm);
+
+    /// <summary>Skrinshot olishdan oldin: ochiq reklama oynasi rasmga tushmasin.</summary>
+    private static void HideAdWindows()
+    {
+        var open = Application.OpenForms.OfType<AdWindow>().ToList();
+        if (open.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var w in open)
+        {
+            w.CloseSilently();
+        }
+
+        Application.DoEvents();
+        Thread.Sleep(80); // ekran (DWM) yangilanishiga ulgursin
     }
 
     private void ApplyHotkeys()
@@ -344,6 +441,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
 
         _capturing = true;
+        HideAdWindows();
         try
         {
             var layout = WindowsScreenInfo.GetLayout();
@@ -408,6 +506,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
 
         _capturing = true;
+        HideAdWindows();
         Bitmap? toPrint = null;
         try
         {
@@ -573,6 +672,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
             using var fromClipboard = Clipboard.GetImage();
             (_smokeSaveResult, _smokeHistoryPreview) = RunSmokeSave(cropped);
+            _smokeAdPreview = RunSmokeAdPreview();
             (_smokePrintResult, _smokePrintPreview) = RunSmokePrint(cropped, layout.MonitorAtCanvas(selection.Location).Dpi);
             string monitors = string.Join(";", layout.Monitors.Select(m => string.Create(CultureInfo.InvariantCulture, $"{m.Bounds.Width}x{m.Bounds.Height}@{m.Dpi}")));
             return fromClipboard is not null && fromClipboard.Size == cropped.Size
@@ -586,6 +686,45 @@ internal sealed class TrayApplicationContext : ApplicationContext
         finally
         {
             MemoryTrimmer.Trim();
+        }
+    }
+
+    /// <summary>CI tutun testi: reklama oynasini (internetsiz, namunaviy reklama bilan) ochib rasmga oladi.</summary>
+    private static string RunSmokeAdPreview()
+    {
+        try
+        {
+            byte[] png;
+            using (var banner = new Bitmap(640, 280))
+            {
+                using (var g = Graphics.FromImage(banner))
+                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(new Rectangle(0, 0, 640, 280), Color.FromArgb(0, 103, 192), Color.FromArgb(0, 168, 140), 20f))
+                using (var font = new Font("Segoe UI", 34f, FontStyle.Bold))
+                {
+                    g.FillRectangle(brush, 0, 0, 640, 280);
+                    g.DrawString("Namuna banner", font, Brushes.White, 40, 100);
+                }
+
+                using var ms = new MemoryStream();
+                banner.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                png = ms.ToArray();
+            }
+
+            var ad = new AdItem(Guid.NewGuid(), "Ingliz tili kursi — maktab o'quvchilari uchun 20% chegirma", null, "https://example.com", 0);
+            using var window = new AdWindow(ad, png);
+            window.PlaceInCorner(Screen.PrimaryScreen?.WorkingArea ?? SystemInformation.WorkingArea);
+            window.Show();
+            window.Refresh();
+            using var shot = new Bitmap(window.Width, window.Height);
+            window.DrawToBitmap(shot, new Rectangle(Point.Empty, window.Size));
+            bool inCorner = window.Right <= SystemInformation.WorkingArea.Right && window.Bottom <= SystemInformation.WorkingArea.Bottom && window.Left > SystemInformation.WorkingArea.Width / 2;
+            string info = string.Create(CultureInfo.InvariantCulture, $"ok image={window.HasImage} size={window.Width}x{window.Height} corner={inCorner}");
+            window.CloseSilently();
+            return info + " png=" + SmokeTest.ToJpegBase64(shot, 1.0, 70);
+        }
+        catch (Exception ex) when (ex is ArgumentException or ExternalException or InvalidOperationException)
+        {
+            return "error: " + ex.GetType().Name + ": " + ex.Message.Replace('\r', ' ').Replace('\n', ' ');
         }
     }
 

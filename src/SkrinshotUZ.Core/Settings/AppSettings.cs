@@ -43,6 +43,12 @@ public sealed class AppSettings
     /// <summary>Saqlash formati (oxirgi tanlangani; standart — PNG).</summary>
     public Storage.ImageFileFormat SaveFormat { get; set; } = Storage.ImageFileFormat.Png;
 
+    /// <summary>Reklama oxirgi marta ko'rsatilgan kun (kuniga bir marta qoidasi uchun).</summary>
+    public DateOnly? AdsLastShownOn { get; set; }
+
+    /// <summary>Oxirgi ko'rsatilgan reklama (navbatdagisini tanlash uchun).</summary>
+    public Guid? AdsLastAdId { get; set; }
+
     /// <summary>Chop etish sozlamalari (oxirgi tanlangani).</summary>
     public Printing.PrintPreferences Print { get; set; } = new();
 
