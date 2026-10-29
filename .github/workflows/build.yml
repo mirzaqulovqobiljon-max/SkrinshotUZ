@@ -443,6 +443,26 @@ jobs:
           echo "$out" | grep -q "BARCHA SXEMA TESTLARI O'TDI"
           echo "::notice title=Supabase sxemasi::$n ta tekshiruv o'tdi (RLS, huquqlar, hisoblagich, sanalar, cheklovlar)"
 
+      - name: Haqiqiy Supabase'ga ulanish (ADS_SUPABASE_* o'rnatilgan bo'lsa)
+        env:
+          ADS_URL: ${{ vars.ADS_SUPABASE_URL }}
+          ADS_KEY: ${{ vars.ADS_SUPABASE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$ADS_URL" ] || [ -z "$ADS_KEY" ]; then
+            echo "::notice title=Supabase::sozlanmagan — reklama o'chiq (docs/reklama-sozlash.md)"; exit 0
+          fi
+          case "$ADS_KEY" in sb_secret_*) echo "::error title=Supabase::ADS_SUPABASE_KEY maxfiy kalit! Faqat ommaviy (publishable/anon) kalit qo'ying."; exit 1;; esac
+          auth=(); case "$ADS_KEY" in eyJ*) auth=(-H "Authorization: Bearer $ADS_KEY");; esac
+          # Dastur bilan aynan bir xil so'rov: faqat o'qish (statistika yozilmaydi).
+          code=$(curl -sS -o feed.json -w '%{http_code}' -X POST "${ADS_URL%/}/rest/v1/rpc/active_ads" \
+                   -H "apikey: $ADS_KEY" "${auth[@]}" -H 'Content-Type: application/json' -d '{}') || code=000
+          if [ "$code" != "200" ]; then
+            echo "::error title=Supabase::active_ads() javobi HTTP $code — URL/kalitni va server/supabase.sql bajarilganini tekshiring: $(head -c 300 feed.json 2>/dev/null)"; exit 1
+          fi
+          n=$(python3 -c "import json;d=json.load(open('feed.json'));assert isinstance(d,list);print(len(d))")
+          echo "::notice title=Supabase::ulanish ishlaydi, hozir faol reklamalar: $n"
+
       - name: Admin sahifa testlari (Chromium, soxta Supabase)
         run: |
           set -euo pipefail
