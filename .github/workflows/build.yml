@@ -9,34 +9,6 @@ on:
     branches: [ main ]
     tags: [ 'v*' ]
   # GitHub sahifasida "Draft a new release" → yangi teg (v1.2.3) → Publish — fayllar shu Release'ga yuklanadi.
-
-  server:
-    name: Supabase sxemasi — RLS va hisoblagich testlari (PostgreSQL)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Kodni olish
-        uses: actions/checkout@v5
-
-      - name: PostgreSQL'ni ishga tushirish
-        run: |
-          sudo systemctl start postgresql.service
-          sudo -u postgres psql -c "alter user postgres password 'postgres'"
-
-      - name: Sxema testlari
-        env:
-          PGPASSWORD: postgres
-        run: |
-          set -euo pipefail
-          psql -h localhost -U postgres -c "create database skuz"
-          cd server/tests
-          out=$(psql -h localhost -U postgres -d skuz -v ON_ERROR_STOP=1 -q \
-                  -f supabase-stub.sql -f ../supabase.sql -f ../supabase.sql -f rls-test.sql 2>&1) || { echo "$out"; echo "::error title=Supabase sxemasi::$(echo "$out" | grep -m1 -E 'ERROR|YIQILDI')"; exit 1; }
-          echo "$out" | grep "o'tdi" || true
-          n=$(echo "$out" | grep -c "NOTICE:  o'tdi")
-          echo "$out" | grep -q "BARCHA SXEMA TESTLARI O'TDI"
-          echo "::notice title=Supabase sxemasi::$n ta tekshiruv o'tdi (RLS, huquqlar, hisoblagich, sanalar, cheklovlar)"
-
   release:
     types: [ published ]
   pull_request:
@@ -438,6 +410,34 @@ jobs:
           name: SkrinshotUZ-${{ steps.version.outputs.value }}-win-x86
           path: publish/win-x86/SkrinshotUZ.exe
           if-no-files-found: error
+
+
+  server:
+    name: Supabase sxemasi — RLS va hisoblagich testlari (PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Kodni olish
+        uses: actions/checkout@v5
+
+      - name: PostgreSQL'ni ishga tushirish
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -c "alter user postgres password 'postgres'"
+
+      - name: Sxema testlari
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h localhost -U postgres -c "create database skuz"
+          cd server/tests
+          out=$(psql -h localhost -U postgres -d skuz -v ON_ERROR_STOP=1 -q \
+                  -f supabase-stub.sql -f ../supabase.sql -f ../supabase.sql -f rls-test.sql 2>&1) || { echo "$out"; echo "::error title=Supabase sxemasi::$(echo "$out" | grep -m1 -E 'ERROR|YIQILDI')"; exit 1; }
+          echo "$out" | grep "o'tdi" || true
+          n=$(echo "$out" | grep -c "NOTICE:  o'tdi")
+          echo "$out" | grep -q "BARCHA SXEMA TESTLARI O'TDI"
+          echo "::notice title=Supabase sxemasi::$n ta tekshiruv o'tdi (RLS, huquqlar, hisoblagich, sanalar, cheklovlar)"
 
   release:
     name: GitHub Release (faqat v* teglarida)
