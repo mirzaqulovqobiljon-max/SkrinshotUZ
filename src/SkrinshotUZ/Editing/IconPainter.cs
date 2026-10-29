@@ -19,6 +19,7 @@ internal enum ToolbarIcon
     Copy,
     Save,
     Print,
+    Ocr,
     Close,
 }
 
@@ -194,6 +195,12 @@ internal static class IconPainter
                 g.DrawRectangle(pen, 0.3f * s, 0.14f * s, 0.4f * s, 0.22f * s);
                 g.DrawRectangle(pen, 0.14f * s, 0.36f * s, 0.72f * s, 0.3f * s);
                 g.DrawRectangle(pen, 0.3f * s, 0.56f * s, 0.4f * s, 0.3f * s);
+                break;
+            case ToolbarIcon.Ocr:
+                // Varaq (o'ng yuqori burchagi bukilgan) va ichida "T" — rasmdan matn olish.
+                g.DrawLines(pen, new[] { P(0.62f, 0.12f), P(0.2f, 0.12f), P(0.2f, 0.88f), P(0.8f, 0.88f), P(0.8f, 0.3f), P(0.62f, 0.12f), P(0.62f, 0.3f), P(0.8f, 0.3f) });
+                g.DrawLine(pen, P(0.34f, 0.46f), P(0.66f, 0.46f));
+                g.DrawLine(pen, P(0.5f, 0.46f), P(0.5f, 0.76f));
                 break;
             case ToolbarIcon.Close:
                 g.DrawLine(pen, P(0.26f, 0.26f), P(0.74f, 0.74f));

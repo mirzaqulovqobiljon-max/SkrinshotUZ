@@ -48,7 +48,7 @@ jobs:
         id: version
         run: |
           # Teg (v1.2.3) bo'lsa — aynan shu versiya; aks holda sinov yig'imi: 1.0.0-dev.<raqam>.
-          $base = '1.1.0'
+          $base = '1.2.0'
           if ($env:GITHUB_REF -like 'refs/tags/v*') {
             $v = $env:GITHUB_REF_NAME.Substring(1)
             if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Teg formati v1.2.3 bo'lishi kerak: $env:GITHUB_REF_NAME" }
@@ -60,6 +60,72 @@ jobs:
           "value=$v" >> $env:GITHUB_OUTPUT
           "numeric=$numeric" >> $env:GITHUB_OUTPUT
           Write-Host "Versiya: $v ($numeric)"
+
+      - name: OCR fayllarini tayyorlash (Tesseract, VC++ runtime, til modellari)
+        run: |
+          # "Matnni Word'ga" uchun fayllar .exe ICHIGA joylanadi (src/SkrinshotUZ/SkrinshotUZ.csproj → ocr-files\).
+          # Manbalar: Tesseract 5 + Leptonica (Windows DLL'lari, charlesw/tesseract NuGet paketi, Apache-2.0 / BSD-2),
+          # Visual C++ runtime (Microsoft redist — app-local), tessdata_fast modellari (Apache-2.0).
+          trap { Write-Host "::error title=OCR fayllari::$($_.Exception.Message) (qator $($_.InvocationInfo.ScriptLineNumber))"; exit 1 }
+          $root = Join-Path (Get-Location) 'ocr-files'
+          foreach ($d in 'x64', 'x86', 'tessdata') { New-Item -ItemType Directory -Force (Join-Path $root $d) | Out-Null }
+
+          # 1) Tesseract va Leptonica (x64 va x86).
+          $pkg = Join-Path $env:RUNNER_TEMP 'tesseract.5.2.0.nupkg'
+          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/Tesseract/5.2.0' -OutFile $pkg -MaximumRetryCount 3 -RetryIntervalSec 5
+          $unpacked = Join-Path $env:RUNNER_TEMP 'tesseract-pkg'
+          Expand-Archive $pkg $unpacked -Force
+          foreach ($arch in 'x64', 'x86') {
+            $dlls = @(Get-ChildItem $unpacked -Recurse -Filter *.dll | Where-Object { $_.Directory.Name -eq $arch -and $_.Name -match '^(tesseract|leptonica)' })
+            if ($dlls.Count -ne 2) { throw "${arch}: Tesseract va Leptonica DLL'lari kutilgan, topildi: $($dlls.Name -join ', ')" }
+            $dlls | Copy-Item -Destination (Join-Path $root $arch)
+          }
+
+          # 2) Visual C++ runtime — app-local (maktab kompyuterida VC++ o'rnatilmagan bo'lishi mumkin).
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          if (-not $vs) { throw "Visual Studio topilmadi (VC++ redist uchun)" }
+          $redist = Get-ChildItem "$vs\VC\Redist\MSVC" -Directory | Where-Object { $_.Name -match '^\d+\.\d+' } | Sort-Object { [version]($_.Name -replace '[^\d\.].*$', '') } -Descending | Select-Object -First 1
+          if (-not $redist) { throw "VC\Redist\MSVC topilmadi" }
+          foreach ($arch in 'x64', 'x86') {
+            foreach ($kind in 'CRT', 'OpenMP') {
+              $dir = Get-ChildItem (Join-Path $redist.FullName $arch) -Directory -Filter "Microsoft.VC14*.$kind" | Select-Object -First 1
+              if (-not $dir) { throw "${arch}: Microsoft.VC14*.$kind topilmadi ($($redist.FullName))" }
+              Get-ChildItem $dir.FullName -Filter *.dll | Where-Object { $_.Name -match '^(vcruntime140(_1)?|msvcp140|vcomp140)\.dll$' } | Copy-Item -Destination (Join-Path $root $arch)
+            }
+          }
+
+          # 3) Har bir DLL'ning bog'liqliklari: yo ocr-files ichida, yo Windows'ning o'zida (VC++ runtime'dan tashqari) bo'lishi shart.
+          $dumpbin = Get-ChildItem "$vs\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1
+          if (-not $dumpbin) { throw "dumpbin.exe topilmadi" }
+          foreach ($arch in 'x64', 'x86') {
+            $folder = Join-Path $root $arch
+            $system = if ($arch -eq 'x64') { "$env:WINDIR\System32" } else { "$env:WINDIR\SysWOW64" }
+            $report = @()
+            foreach ($dll in Get-ChildItem $folder -Filter *.dll) {
+              $deps = & $dumpbin.FullName /nologo /dependents $dll.FullName | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[\w\-\.]+\.dll$' }
+              foreach ($dep in $deps) {
+                $local = Test-Path (Join-Path $folder $dep)
+                $redistDll = $dep -match '^(vcruntime|msvcp|vcomp|concrt)'
+                $inWindows = ($dep -like 'api-ms-win-*') -or (Test-Path (Join-Path $system $dep))
+                if (-not $local -and ($redistDll -or -not $inWindows)) { throw "${arch}/$($dll.Name): '$dep' ocr-files ichida yo'q" }
+              }
+              $report += "$($dll.Name) [$($deps -join ', ')]"
+            }
+            Write-Host "::notice title=OCR ${arch} DLL'lari::$($report -join ' | ')"
+          }
+
+          # 4) Til modellari: o'zbek (lotin), o'zbek (kirill), rus, ingliz — "fast" (kichik va tez).
+          foreach ($lang in 'uzb', 'uzb_cyrl', 'rus', 'eng') {
+            $out = Join-Path $root "tessdata\$lang.traineddata"
+            Invoke-WebRequest "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/$lang.traineddata" -OutFile $out -MaximumRetryCount 3 -RetryIntervalSec 5
+            $kb = [math]::Round((Get-Item $out).Length / 1KB)
+            if ($kb -lt 500) { throw "$lang.traineddata juda kichik ($kb KB) — yuklab olish buzilgan" }
+          }
+
+          $lines = Get-ChildItem $root -Recurse -File | ForEach-Object { "$($_.Directory.Name)/$($_.Name) $([math]::Round($_.Length / 1MB, 2)) MB" }
+          Write-Host "::notice title=OCR fayllari::$($lines -join ' | ')"
+          $total = [math]::Round(((Get-ChildItem $root -Recurse -File | Measure-Object Length -Sum).Sum) / 1MB, 1)
+          "- **OCR fayllari**: $total MB (x64 + x86 + 4 til)" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Paketlarni tiklash
         run: dotnet restore SkrinshotUZ.sln
@@ -192,6 +258,10 @@ jobs:
               if ($print -like '*pdf=skip*') { Write-Host "::warning::${rid}: PDF printer yo'q — PDF tekshirilmadi" }
             }
             else { throw "${rid}: chop etish ishlamadi — $print" }
+            # Matnni Word'ga (OCR): .exe ichidan chiqarish, shu arxitekturadagi Tesseract, lotin + kirill, .docx.
+            $ocr = ([regex]::Match($text, '(?m)^ocr=(.*?)\r?$')).Groups[1].Value
+            if ($ocr -like 'ok*') { Write-Host "::notice title=${rid} OCR::$ocr" }
+            else { throw "${rid}: OCR ishlamadi — $ocr" }
             "- **${rid}** tutun testi o'tdi — ishchi xotira: $ws MB, shaxsiy: $priv MB, eng yuqori: $peak MB; tugmalar: $keys" >> $env:GITHUB_STEP_SUMMARY
             if ($ws -ge 40) { Write-Host "::warning::${rid}: xotira $ws MB (maqsad < 40 MB)" }
 
@@ -358,6 +428,9 @@ jobs:
           $report = Join-Path $env:RUNNER_TEMP 'smoke-installed.txt'
           $p = Start-Process $exe -ArgumentList '--smoke-test', '--smoke-report', "`"$report`"" -PassThru -Wait
           if ($p.ExitCode -ne 0) { throw "o'rnatilgan .exe tutun testi: chiqish kodi $($p.ExitCode)" }
+          $ocrDir = Join-Path $env:LOCALAPPDATA 'Skrinshot UZ\ocr'
+          if ((Get-Content $report -Raw) -notmatch '(?m)^ocr=ok') { throw "o'rnatilgan .exe: OCR ishlamadi" }
+          if (-not (Test-Path $ocrDir)) { throw "OCR fayllari chiqarilmadi: $ocrDir" }
 
           # 3) Yangilash dastur ishlab turganda: o'rnatuvchi uni o'zi yopishi kerak (--exit).
           #    Foydalanuvchi ruxsatlarga avval javob bergan holat; avtoishga tushirish yoqilgan.
@@ -386,12 +459,12 @@ jobs:
           # unins000.exe o'zini vaqtinchalik papkaga nusxalab ishlaydi — natijani kutamiz.
           for ($i = 0; $i -lt 60 -and (Test-Path $exe); $i++) { Start-Sleep -Seconds 1 }
           if (-not $running.WaitForExit(5000)) { $running.Kill(); throw "o'chirishda ishlab turgan dastur yopilmadi" }
-          foreach ($f in $exe, $startMenu, $desktop, $appData) { if (Test-Path $f) { throw "o'chirilmadi: $f" } }
+          foreach ($f in $exe, $startMenu, $desktop, $appData, $ocrDir) { if (Test-Path $f) { throw "o'chirilmadi: $f" } }
           if (Test-Path $uninstKey) { throw "Dasturlar ro'yxatidagi yozuv qoldi" }
           if ((Get-ItemProperty $runKey -ErrorAction SilentlyContinue).'Skrinshot UZ') { throw "avtoishga tushirish yozuvi qoldi" }
           if (-not (Test-Path $keep)) { throw "skrinshotlar o'chirib yuborildi!" }
           Remove-Item $pictures -Recurse -Force
-          Write-Host "::notice title=O'chirish::fayllar, yorliqlar, avtoishga tushirish va sozlamalar o'chirildi; skrinshotlar saqlanib qoldi"
+          Write-Host "::notice title=O'chirish::fayllar, yorliqlar, avtoishga tushirish, sozlamalar va OCR fayllari o'chirildi; skrinshotlar saqlanib qoldi"
           "- **O'rnatuvchi testi**: o'rnatish, ishlab turgan dasturni yangilash, o'chirish — o'tdi" >> $env:GITHUB_STEP_SUMMARY
 
       - name: SkrinshotUZ_Setup.exe ni Artifacts'ga qo'yish

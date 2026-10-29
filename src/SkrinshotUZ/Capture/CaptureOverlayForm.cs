@@ -19,6 +19,9 @@ internal enum OverlayAction
 
     /// <summary>Chop etish (Ctrl+P, "Chop etish") — overlay yopilgach chop etish oynasi ochiladi.</summary>
     Print,
+
+    /// <summary>Matnni Word'ga (Ctrl+T) — overlay yopilgach sohadagi matn aniqlanib, .docx ochiladi.</summary>
+    Ocr,
 }
 
 /// <summary>
@@ -417,6 +420,9 @@ internal sealed class CaptureOverlayForm : Form
             case Keys.P when ctrl:
                 Accept(OverlayAction.Print);
                 return true;
+            case Keys.T when ctrl:
+                Accept(OverlayAction.Ocr);
+                return true;
             case Keys.Z when ctrl && shift:
             case Keys.Y when ctrl:
                 Redo();
@@ -512,6 +518,7 @@ internal sealed class CaptureOverlayForm : Form
         _toolbars.CopyClicked += (_, _) => Accept();
         _toolbars.SaveClicked += (_, _) => SaveAs();
         _toolbars.PrintClicked += (_, _) => Accept(OverlayAction.Print);
+        _toolbars.OcrClicked += (_, _) => Accept(OverlayAction.Ocr);
         _toolbars.CloseClicked += (_, _) => Cancel();
         RefreshToolbarState();
     }

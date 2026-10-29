@@ -106,6 +106,8 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; F
 [UninstallDelete]
 ; Faqat dastur sozlamalari, tarix ro'yxati va xatolik loglari. Skrinshotlarning o'zi (Rasmlar\Skrinshot UZ) qoladi.
 Type: filesandordirs; Name: "{userappdata}\{#AppName}"
+; "Matnni Word'ga" (OCR) uchun chiqarilgan Tesseract fayllari (birinchi ishlatilganda .exe ichidan yoziladi).
+Type: filesandordirs; Name: "{localappdata}\{#AppName}\ocr"
 
 [Code]
 const

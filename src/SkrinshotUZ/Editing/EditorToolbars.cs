@@ -20,6 +20,7 @@ internal sealed class EditorToolbars : IDisposable
     private readonly ToolStripButton _copy;
     private readonly ToolStripButton _save;
     private readonly ToolStripButton _print;
+    private readonly ToolStripButton _ocr;
     private readonly ToolStripButton _close;
     private readonly List<ToolStripMenuItem> _colorItems = new();
     private readonly List<ToolStripMenuItem> _thicknessItems = new();
@@ -80,8 +81,9 @@ internal sealed class EditorToolbars : IDisposable
         _copy = ActionButton(Strings.Action_Copy, () => CopyClicked?.Invoke(this, EventArgs.Empty));
         _save = ActionButton(Strings.Action_Save, () => SaveClicked?.Invoke(this, EventArgs.Empty));
         _print = ActionButton(Strings.Action_Print, () => PrintClicked?.Invoke(this, EventArgs.Empty));
+        _ocr = ActionButton(Strings.Action_Ocr, () => OcrClicked?.Invoke(this, EventArgs.Empty));
         _close = ActionButton(Strings.Action_Close, () => CloseClicked?.Invoke(this, EventArgs.Empty));
-        Actions.Items.AddRange(new ToolStripItem[] { _copy, _save, _print, new ToolStripSeparator(), _close });
+        Actions.Items.AddRange(new ToolStripItem[] { _copy, _save, _print, _ocr, new ToolStripSeparator(), _close });
     }
 
     public event EventHandler<EditorTool>? ToolClicked;
@@ -101,6 +103,9 @@ internal sealed class EditorToolbars : IDisposable
     public event EventHandler? SaveClicked;
 
     public event EventHandler? PrintClicked;
+
+    /// <summary>"Matnni Word'ga" (OCR).</summary>
+    public event EventHandler? OcrClicked;
 
     public event EventHandler? CloseClicked;
 
@@ -137,8 +142,9 @@ internal sealed class EditorToolbars : IDisposable
         ReplaceImage(_copy, IconPainter.Draw(ToolbarIcon.Copy, icon));
         ReplaceImage(_save, IconPainter.Draw(ToolbarIcon.Save, icon));
         ReplaceImage(_print, IconPainter.Draw(ToolbarIcon.Print, icon));
+        ReplaceImage(_ocr, IconPainter.Draw(ToolbarIcon.Ocr, icon));
         ReplaceImage(_close, IconPainter.Draw(ToolbarIcon.Close, icon));
-        foreach (var b in new ToolStripItem[] { _undo, _redo, _copy, _save, _print, _close, _colorButton, _thicknessButton })
+        foreach (var b in new ToolStripItem[] { _undo, _redo, _copy, _save, _print, _ocr, _close, _colorButton, _thicknessButton })
         {
             b.Size = size;
         }

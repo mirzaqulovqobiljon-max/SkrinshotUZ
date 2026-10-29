@@ -15,6 +15,18 @@ public static class AppPaths
         return Path.Combine(localAppData, AppFolderName, "logs");
     }
 
+    /// <summary>
+    /// Matnni aniqlash (OCR) fayllari: <c>%LOCALAPPDATA%\Skrinshot UZ\ocr</c> (Roaming'da emas — katta fayllar
+    /// domen profillari bilan serverga ko'chirilmasin). O'chirishda o'rnatuvchi tozalaydi.
+    /// </summary>
+    /// <param name="localAppData">LocalApplicationData papkasi.</param>
+    /// <returns>To'liq yo'l.</returns>
+    public static string OcrFolder(string localAppData)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(localAppData);
+        return Path.Combine(localAppData, AppFolderName, "ocr");
+    }
+
     /// <summary>Sozlamalar fayli: <c>%APPDATA%\Skrinshot UZ\settings.json</c>.</summary>
     /// <param name="appData">ApplicationData (Roaming) papkasi.</param>
     /// <returns>To'liq yo'l.</returns>

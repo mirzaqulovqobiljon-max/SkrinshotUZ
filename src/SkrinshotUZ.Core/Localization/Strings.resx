@@ -472,4 +472,34 @@ Uni Windows sozlamalari → Bluetooth va qurilmalar → Printerlar bo'limida qo'
   <data name="Ads_Close" xml:space="preserve">
     <value>Yopish</value>
   </data>
+  <data name="Action_Ocr" xml:space="preserve">
+    <value>Matnni Word'ga (Ctrl+T)</value>
+  </data>
+  <data name="History_Ocr" xml:space="preserve">
+    <value>Matnni Word'ga</value>
+  </data>
+  <data name="Ocr_Title" xml:space="preserve">
+    <value>Matnni aniqlash</value>
+  </data>
+  <data name="Ocr_Progress" xml:space="preserve">
+    <value>Rasmdagi matn aniqlanmoqda…
+Bir necha soniya kuting.</value>
+  </data>
+  <data name="Ocr_NoText" xml:space="preserve">
+    <value>Rasmda matn topilmadi.
+Matn aniqroq ko'ringan sohani tanlab, qayta urinib ko'ring.</value>
+  </data>
+  <data name="Ocr_Done" xml:space="preserve">
+    <value>Matn Word'ga o'tkazildi: {0}</value>
+  </data>
+  <data name="Ocr_SavedNoViewer" xml:space="preserve">
+    <value>Hujjat saqlandi: {0}
+Uni ochadigan dastur (Word yoki LibreOffice) topilmadi. Bosing — papkada ko'rsatiladi.</value>
+  </data>
+  <data name="Ocr_Failed" xml:space="preserve">
+    <value>Matnni aniqlab bo'lmadi: {0}</value>
+  </data>
+  <data name="Ocr_Unavailable" xml:space="preserve">
+    <value>Matnni aniqlash (OCR) fayllari bu nusxada yo'q. Dasturni SkrinshotUZ_Setup.exe orqali qayta o'rnating.</value>
+  </data>
 </root>

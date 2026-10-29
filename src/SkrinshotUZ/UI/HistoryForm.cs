@@ -21,6 +21,7 @@ internal sealed class HistoryForm : Form
     private readonly Button _copy;
     private readonly Button _remove;
     private readonly Button? _print;
+    private readonly Button? _ocr;
     private readonly Font _font;
     private readonly Icon _icon;
 
@@ -29,7 +30,8 @@ internal sealed class HistoryForm : Form
     /// <param name="folder">Skrinshotlar papkasi ("Papkani ochish" tugmasi uchun).</param>
     /// <param name="changed">Tarix o'zgarganda (diskka yozish uchun).</param>
     /// <param name="print">"Chop etish" tugmasi uchun (fayl yo'li bilan); <c>null</c> — tugma yo'q.</param>
-    public HistoryForm(ScreenshotHistory history, string folder, Action changed, Action<string>? print = null)
+    /// <param name="ocr">"Matnni Word'ga" tugmasi uchun (fayl yo'li bilan); <c>null</c> — tugma yo'q.</param>
+    public HistoryForm(ScreenshotHistory history, string folder, Action changed, Action<string>? print = null, Action<string>? ocr = null)
     {
         _history = history ?? throw new ArgumentNullException(nameof(history));
         _folder = folder;
@@ -88,6 +90,11 @@ internal sealed class HistoryForm : Form
             _print = MakeButton(Strings.History_Print, () => WithSelected(print));
         }
 
+        if (ocr is not null)
+        {
+            _ocr = MakeButton(Strings.History_Ocr, () => WithSelected(ocr));
+        }
+
         _remove = MakeButton(Strings.History_Remove, RemoveSelected);
         var folderButton = MakeButton(Strings.History_OpenFolder, () => Shell.OpenFolder(_folder));
 
@@ -96,6 +103,11 @@ internal sealed class HistoryForm : Form
         if (_print is not null)
         {
             buttons.Controls.Add(_print);
+        }
+
+        if (_ocr is not null)
+        {
+            buttons.Controls.Add(_ocr);
         }
 
         buttons.Controls.AddRange(new Control[] { _remove, folderButton });
@@ -239,6 +251,11 @@ internal sealed class HistoryForm : Form
         if (_print is not null)
         {
             _print.Enabled = selected;
+        }
+
+        if (_ocr is not null)
+        {
+            _ocr.Enabled = selected;
         }
     }
 

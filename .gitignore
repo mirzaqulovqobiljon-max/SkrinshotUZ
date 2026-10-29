@@ -10,3 +10,6 @@ TestResults/
 .vscode/
 .idea/
 *.swp
+
+# OCR fayllari (CI yuklaydi; repoga kirmaydi)
+ocr-files/

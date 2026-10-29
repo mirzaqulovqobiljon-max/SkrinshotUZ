@@ -54,13 +54,32 @@ public static class ScreenshotFileNamer
     /// <param name="format">Format.</param>
     /// <param name="fileExists">Fayl mavjudligini tekshiruvchi funksiya (testda almashtiriladi).</param>
     /// <returns>To'liq yo'l.</returns>
-    public static string CreateUniquePath(string folder, DateTime timestamp, ImageFileFormat format, Func<string, bool> fileExists)
+    public static string CreateUniquePath(string folder, DateTime timestamp, ImageFileFormat format, Func<string, bool> fileExists) =>
+        UniquePath(folder, Prefix, timestamp, GetExtension(format), fileExists);
+
+    /// <summary>
+    /// Word hujjati (OCR natijasi) uchun band bo'lmagan yo'l: <c>matn_2026-10-29_19-40-00.docx</c>,
+    /// bir soniyada bir nechta bo'lsa — <c>…_2.docx</c>.
+    /// </summary>
+    /// <param name="folder">Papka.</param>
+    /// <param name="timestamp">Vaqt.</param>
+    /// <param name="fileExists">Fayl mavjudligini tekshiruvchi funksiya.</param>
+    /// <returns>To'liq yo'l.</returns>
+    public static string CreateUniqueDocumentPath(string folder, DateTime timestamp, Func<string, bool> fileExists) =>
+        UniquePath(folder, DocumentPrefix, timestamp, DocumentExtension, fileExists);
+
+    /// <summary>Word hujjati nomi prefiksi.</summary>
+    public const string DocumentPrefix = "matn_";
+
+    /// <summary>Word hujjati kengaytmasi.</summary>
+    public const string DocumentExtension = ".docx";
+
+    private static string UniquePath(string folder, string prefix, DateTime timestamp, string ext, Func<string, bool> fileExists)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(folder);
         ArgumentNullException.ThrowIfNull(fileExists);
 
-        string stem = Prefix + timestamp.ToString(TimestampFormat, CultureInfo.InvariantCulture);
-        string ext = GetExtension(format);
+        string stem = prefix + timestamp.ToString(TimestampFormat, CultureInfo.InvariantCulture);
 
         string candidate = Path.Combine(folder, stem + ext);
         if (!fileExists(candidate))

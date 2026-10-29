@@ -51,6 +51,23 @@
     <AssemblyMetadata Include="AdsSupabaseKey" Value="$(AdsSupabaseKey)" />
   </ItemGroup>
 
+  <!--
+    Matnni aniqlash (OCR): Tesseract kutubxonalari (arxitekturaga mos) va til modellari .exe ICHIGA joylanadi —
+    natija baribir bitta fayl, internet kerak emas. Fayllarni CI "OCR fayllarini tayyorlash" qadami ocr-files\ ga yuklaydi:
+      ocr-files\x64\*.dll, ocr-files\x86\*.dll, ocr-files\tessdata\*.traineddata
+    Papka yo'q bo'lsa (masalan, Linux'da Core testlari) — loyiha baribir yig'iladi, OCR tugmasi tushuntirish beradi.
+  -->
+  <PropertyGroup>
+    <OcrFilesDir>$(MSBuildThisFileDirectory)..\..\ocr-files\</OcrFilesDir>
+    <OcrArch Condition="'$(RuntimeIdentifier)' == 'win-x86'">x86</OcrArch>
+    <OcrArch Condition="'$(OcrArch)' == ''">x64</OcrArch>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(OcrFilesDir)$(OcrArch)') And Exists('$(OcrFilesDir)tessdata')">
+    <EmbeddedResource Include="$(OcrFilesDir)$(OcrArch)\*.dll" LogicalName="ocr/bin/%(Filename)%(Extension)" WithCulture="false" />
+    <EmbeddedResource Include="$(OcrFilesDir)tessdata\*.traineddata" LogicalName="ocr/tessdata/%(Filename)%(Extension)" WithCulture="false" />
+  </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Resources\app.ico" LogicalName="SkrinshotUZ.app.ico" />
   </ItemGroup>

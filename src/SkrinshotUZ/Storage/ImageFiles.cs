@@ -152,6 +152,28 @@ internal static class Shell
     /// <summary>Faylni standart dasturda ochadi (masalan, "Rasmlar" ilovasi).</summary>
     public static void Open(string path) => Start(new ProcessStartInfo(path) { UseShellExecute = true });
 
+    /// <summary>
+    /// Hujjatni standart dasturda ochadi (.docx — Word, LibreOffice yoki WPS).
+    /// Ochadigan dastur yo'q bo'lsa — <c>false</c> (foydalanuvchiga papka ko'rsatiladi).
+    /// </summary>
+    public static bool TryOpenDocument(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var _ = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            return true;
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or FileNotFoundException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Havolani standart brauzerda ochadi (faqat https — boshqa hech narsa ishga tushirilmaydi).</summary>
     public static void OpenUrl(string url)
     {

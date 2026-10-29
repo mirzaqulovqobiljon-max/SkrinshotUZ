@@ -17,6 +17,7 @@ using SkrinshotUZ.Core.Storage;
 using SkrinshotUZ.Editing;
 using SkrinshotUZ.Storage;
 using SkrinshotUZ.Native;
+using SkrinshotUZ.Ocr;
 using SkrinshotUZ.Printing;
 using SkrinshotUZ.UI;
 
@@ -486,7 +487,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
-        _historyForm = new HistoryForm(_history, CurrentSaveFolder(), SaveHistory, PrintFile);
+        _historyForm = new HistoryForm(_history, CurrentSaveFolder(), SaveHistory, PrintFile, OcrFile);
         _historyForm.FormClosed += (_, _) =>
         {
             _historyForm?.Dispose();
@@ -511,6 +512,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _capturing = true;
         HideAdWindows();
         Bitmap? toPrint = null;
+        Bitmap? toOcr = null;
+        double ocrDpi = 96;
         try
         {
             ScreenLayout layout;
@@ -531,22 +534,31 @@ internal sealed class TrayApplicationContext : ApplicationContext
             {
                 if (overlay.ShowDialog() == DialogResult.OK && overlay.Result is Rectangle selection)
                 {
-                    var cropped = ImageComposer.Compose(screen, selection, overlay.Annotations);
-
-                    // Rasm qaysi monitorda olingan — o'sha masshtab "Asl o'lchamda" chop etish uchun rasmga yoziladi
-                    // (PNG/JPG faylda ham saqlanadi).
+                    // Rasm qaysi monitorda olingan — o'sha masshtab "Asl o'lchamda" chop etish va OCR uchun.
                     var center = new Point(selection.X + (selection.Width / 2), selection.Y + (selection.Height / 2));
-                    ImageDpi.Set(cropped, layout.MonitorAtCanvas(center).Dpi);
+                    double dpi = layout.MonitorAtCanvas(center).Dpi;
 
-                    if (overlay.Action == OverlayAction.Print)
+                    if (overlay.Action == OverlayAction.Ocr)
                     {
-                        toPrint = cropped; // chop etish oynasi overlay yopilgandan keyin ochiladi
+                        // Matn chizmalarsiz olinadi (qalam/strelka chiziqlari harflarni buzmasin).
+                        toOcr = ImageComposer.Compose(screen, selection, Array.Empty<Annotation>());
+                        ocrDpi = dpi;
                     }
                     else
                     {
-                        using (cropped)
+                        var cropped = ImageComposer.Compose(screen, selection, overlay.Annotations);
+                        ImageDpi.Set(cropped, dpi); // PNG/JPG faylda ham saqlanadi
+
+                        if (overlay.Action == OverlayAction.Print)
                         {
-                            FinishCapture(overlay, cropped);
+                            toPrint = cropped; // chop etish oynasi overlay yopilgandan keyin ochiladi
+                        }
+                        else
+                        {
+                            using (cropped)
+                            {
+                                FinishCapture(overlay, cropped);
+                            }
                         }
                     }
                 }
@@ -565,6 +577,87 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 ShowPrint(toPrint);
             }
         }
+
+        if (toOcr is not null)
+        {
+            using (toOcr)
+            {
+                RunOcr(toOcr, ocrDpi);
+            }
+        }
+    }
+
+    // ---------- Matnni Word'ga (OCR) ----------
+
+    /// <summary>
+    /// Rasmdagi matnni aniqlaydi (fon oqimida, "kuting" oynasi bilan), "Rasmlar\Skrinshot UZ" papkasiga
+    /// <c>matn_….docx</c> yozadi va Word'da ochadi. Hammasi oflayn.
+    /// </summary>
+    private void RunOcr(Bitmap image, double dpi)
+    {
+        if (!OcrService.IsAvailable)
+        {
+            MessageBox.Show(Strings.Ocr_Unavailable, Strings.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        OcrResult? result;
+        Exception? error;
+        using (var progress = new OcrProgressForm<OcrResult>(() => OcrService.Recognize(image, dpi)))
+        {
+            progress.ShowDialog();
+            result = progress.Result;
+            error = progress.Error;
+        }
+
+        MemoryTrimmer.Trim(); // Tesseract modellari xotiradan bo'shatildi
+
+        if (error is not null || result is null)
+        {
+            string reason = error?.Message ?? "?";
+            MessageBox.Show(string.Format(CultureInfo.CurrentCulture, Strings.Ocr_Failed, reason), Strings.AppName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        if (result.VisibleChars == 0)
+        {
+            MessageBox.Show(Strings.Ocr_NoText, Strings.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        string path;
+        try
+        {
+            path = OcrService.SaveDocument(result, CurrentSaveFolder());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.Ocr_Failed, ex.Message), ToolTipIcon.Warning);
+            return;
+        }
+
+        string name = Path.GetFileName(path);
+        if (Shell.TryOpenDocument(path))
+        {
+            ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.Ocr_Done, name), ToolTipIcon.Info, () => Shell.ShowInFolder(path));
+        }
+        else
+        {
+            ShowBalloon(string.Format(CultureInfo.CurrentCulture, Strings.Ocr_SavedNoViewer, name), ToolTipIcon.Warning, () => Shell.ShowInFolder(path));
+        }
+    }
+
+    /// <summary>Tarix oynasidan: saqlangan rasmdagi matnni Word'ga.</summary>
+    private void OcrFile(string path)
+    {
+        using var image = Thumbnails.Load(path);
+        if (image is null)
+        {
+            MessageBox.Show(Strings.Print_LoadFailed, Strings.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        RunOcr(image, ImageDpi.Of(image));
     }
 
     /// <summary>Overlay natijasi: saqlash yoki buferga nusxa.</summary>
