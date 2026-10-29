@@ -51,6 +51,7 @@ Barcha javoblarni keyin ham o'zgartirish mumkin: soat yonidagi Skrinshot UZ belg
 | **Ctrl + C** yoki **Enter** | Nusxa olish (Word, Paint, Telegram'ga Ctrl+V bilan qo'yish mumkin) |
 | **Ctrl + S** | Saqlash (PNG yoki JPG) |
 | **Ctrl + P** | Chop etish |
+| **Ctrl + T** | Matnni Word'ga (rasmdagi yozuv tahrirlanadigan matnga aylanadi) |
 | **Ctrl + Z / Ctrl + Y** | Bekor qilish / qaytarish |
 | **Delete** | Tanlangan chizmani o'chirish |
 | **Esc** | Avval chizmadan tanlovni olib tashlaydi, keyin bekor qiladi |
@@ -67,7 +68,7 @@ Barcha javoblarni keyin ham o'zgartirish mumkin: soat yonidagi Skrinshot UZ belg
 
 - **Saqlash joyi:** standart holatda `Rasmlar\Skrinshot UZ` papkasi, fayl nomi `skrinshot_2026-10-27_20-38-15.png` ko'rinishida. Oxirgi tanlangan papka va format eslab qolinadi.
 - **"Saqlandi" xabari:** ustiga bosilsa, papka ochilib, fayl belgilangan holda ko'rinadi.
-- **"Oxirgi skrinshotlar" oynasi** (tray menyusida): saqlangan rasmlar rasmchalari bilan. Ulardan birini ochish, nusxa olish, chop etish yoki papkasini ko'rsatish mumkin.
+- **"Oxirgi skrinshotlar" oynasi** (tray menyusida): saqlangan rasmlar rasmchalari bilan. Ulardan birini ochish, nusxa olish, chop etish, matnini Word'ga o'tkazish yoki papkasini ko'rsatish mumkin.
 
 ### 5. Chop etish (Ctrl + P)
 
@@ -84,11 +85,27 @@ Chop etish oynasida chapda sozlamalar, o'ngda esa A4 varaq qanday chiqishi ko'ri
 
 **PDF ga saqlash:** printer o'rniga PDF faylga saqlaydi (Windows'dagi "Microsoft Print to PDF" orqali).
 
-### 6. O'chirish
+### 6. Matnni Word'ga (Ctrl + T)
+
+Ekrandagi test, jadval yoki matnni qayta yozib o'tirmasdan Word hujjatiga aylantirish:
+
+1. **PrintScreen** bosing va matnli sohani belgilang.
+2. Pastdagi **varaq ikonkali tugmani** bosing (yoki **Ctrl + T**).
+3. Bir necha soniyada matn aniqlanadi va **Word'da ochiladi**. Fayl `Rasmlar\Skrinshot UZ\matn_2026-10-29_19-40-00.docx` sifatida saqlanadi.
+
+- **Tillar:** o'zbek (lotin va kirill), rus, ingliz. Tilni tanlash shart emas, aralash matn ham o'qiladi.
+- **Hujjat:** Times New Roman 14, A4 varaq, ish yuritish standartidagi maydonlar (chap 30 mm, o'ng 15 mm). Qatorlar ekrandagidek saqlanadi.
+- **Tungi rejimdagi** (qora fonda oq yozuv) dasturlardan ham o'qiydi.
+- Matn chizmalarsiz olinadi: qalam yoki strelka bilan chizilgan belgilar matnni buzmaydi.
+- **To'liq oflayn:** rasm hech qayerga yuborilmaydi, internet kerak emas.
+- Word o'rnatilmagan bo'lsa ham `.docx` fayl yaratiladi (LibreOffice yoki WPS bilan ochiladi).
+- **Maslahat:** matn qanchalik aniq va yirik ko'rinsa, natija shuncha yaxshi. Juda mayda yozuvni avval kattalashtirib (Ctrl + "+"), keyin skrinshot qiling. Qo'lyozmani o'qimaydi.
+
+### 7. O'chirish
 
 **Windows sozlamalari → Ilovalar → Skrinshot UZ → O'chirish.**
 
-- **O'chiriladi:** dastur, yorliqlar, sozlamalar va "Windows bilan birga ishga tushirish" yozuvi.
+- **O'chiriladi:** dastur, yorliqlar, sozlamalar, matnni aniqlash fayllari va "Windows bilan birga ishga tushirish" yozuvi.
 - **Qirqish vositasi:** agar PrintScreen sozlamasini Skrinshot UZ o'chirgan bo'lsa, uni qaytarish **so'raladi**.
 - **Qoladi:** saqlangan skrinshotlaringiz (`Rasmlar\Skrinshot UZ`) hech qachon o'chirilmaydi.
 
@@ -110,6 +127,7 @@ yashiriladi, ya'ni rasmga tushmaydi. Internet bo'lmasa, hech narsa chiqmaydi va 
 - Dastur yangilanishlarni o'zi tekshirmaydi.
 - Rasmlar faqat siz tanlagan papkada saqlanadi.
 - Sozlamalar `%APPDATA%\Skrinshot UZ` papkasida turadi.
+- Matnni aniqlash (OCR) kompyuterning o'zida bajariladi; uning fayllari birinchi ishlatilganda `%LOCALAPPDATA%\Skrinshot UZ\ocr` papkasiga bir marta chiqariladi.
 - Xatolik bo'lsa, `logs` papkasiga faqat texnik ma'lumot yoziladi (rasm emas).
 
 ---
@@ -189,3 +207,15 @@ iscc installer\SkrinshotUZ.iss        # Inno Setup 6.5+ → publish\setup\Skrins
 | `--uninstall [--quiet]` | O'chirishdan oldin tozalash (o'rnatuvchi chaqiradi) |
 
 **Jim o'rnatish** (IT xodimlari uchun): `SkrinshotUZ_Setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART`. Barcha foydalanuvchilar uchun o'rnatish: `/ALLUSERS` (administrator huquqi kerak).
+
+### Uchinchi tomon komponentlari (OCR)
+
+"Matnni Word'ga" funksiyasi .exe ichiga joylangan quyidagi ochiq kodli komponentlardan foydalanadi:
+
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) 5 — Apache License 2.0
+- [Leptonica](http://www.leptonica.org/) — BSD 2-Clause
+- Til modellari [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) 4.1.0 (`uzb`, `uzb_cyrl`, `rus`, `eng`) — Apache License 2.0
+- Windows DLL'lari [charlesw/tesseract](https://github.com/charlesw/tesseract) 5.2.0 paketidan; Microsoft Visual C++ runtime (redistributable)
+
+Fayllar CI'da yuklab olinadi (`.github/workflows/build.yml` → "OCR fayllarini tayyorlash") va repoga kirmaydi.
+
