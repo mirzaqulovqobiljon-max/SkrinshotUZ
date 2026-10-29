@@ -64,6 +64,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly CancellationTokenSource _adsCts = new();
     private System.Windows.Forms.Timer? _adsTimer;
     private bool _adsRunning;
+    private bool _disposed;
     private ScreenshotHistory _history = new();
     private JsonHistoryStore? _historyStore;
     private HistoryForm? _historyForm;
@@ -172,8 +173,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
+        // Windows Forms kontekstni yopilishda ikki marta tozalaydi (Application.Run va using) — ikkinchisi jim o'tadi.
+        if (disposing && !_disposed)
         {
+            _disposed = true;
             _startupTimer.Dispose();
             _adsCts.Cancel();
             _adsTimer?.Dispose();
