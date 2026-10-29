@@ -144,6 +144,7 @@ jobs:
 
       - name: Tutun testi (.exe ishga tushadimi, xotira < 40 MB)
         run: |
+          trap { Write-Host "::error title=Tutun testi::$($_.Exception.Message) (qator $($_.InvocationInfo.ScriptLineNumber))"; exit 1 }
           foreach ($rid in 'win-x64', 'win-x86') {
             $report = Join-Path $env:RUNNER_TEMP "smoke-$rid.txt"
             $p = Start-Process "publish/$rid/SkrinshotUZ.exe" -ArgumentList '--smoke-test', '--smoke-report', "`"$report`"" -PassThru
