@@ -50,6 +50,25 @@ public class OcrTests
     }
 
     [Fact]
+    public void DarkMode_LightTextOnDarkBackground_Recognized()
+    {
+        using var light = SmokeTest.RenderSampleText();
+        using var dark = new Bitmap(light.Width, light.Height, PixelFormat.Format24bppRgb);
+        for (int y = 0; y < light.Height; y++)
+        {
+            for (int x = 0; x < light.Width; x++)
+            {
+                var c = light.GetPixel(x, y);
+                dark.SetPixel(x, y, Color.FromArgb(255 - c.R, 255 - c.G, 255 - c.B)); // oq matn, qora fon
+            }
+        }
+
+        var result = OcrService.Recognize(dark, 96);
+
+        Assert.Contains("Skrinshot", string.Join(" ", result.Paragraphs.SelectMany(p => p.Lines)));
+    }
+
+    [Fact]
     public void BlankImage_NoText()
     {
         using var image = new Bitmap(300, 120, PixelFormat.Format24bppRgb);

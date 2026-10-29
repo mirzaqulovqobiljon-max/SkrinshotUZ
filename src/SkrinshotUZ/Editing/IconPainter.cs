@@ -198,6 +198,7 @@ internal static class IconPainter
                 break;
             case ToolbarIcon.Ocr:
                 // Varaq (o'ng yuqori burchagi bukilgan) va ichida "T" — rasmdan matn olish.
+                pen.Width = Math.Max(1.2f, s / 15f); // glif'lar bilan bir xil ingichkalikda
                 g.DrawLines(pen, new[] { P(0.62f, 0.12f), P(0.2f, 0.12f), P(0.2f, 0.88f), P(0.8f, 0.88f), P(0.8f, 0.3f), P(0.62f, 0.12f), P(0.62f, 0.3f), P(0.8f, 0.3f) });
                 g.DrawLine(pen, P(0.34f, 0.46f), P(0.66f, 0.46f));
                 g.DrawLine(pen, P(0.5f, 0.46f), P(0.5f, 0.76f));

@@ -209,6 +209,7 @@ internal sealed class TesseractOcr
             image.UnlockBits(data);
         }
 
+        GrayImage.NormalizePolarity(gray); // tungi rejim: och matn qorong'i fonda → qora matn oq fonda
         int scale = OcrImagePlan.ChooseScale(w, h, dpi);
         byte[] scaled = GrayImage.Upscale(gray, w, h, scale);
         return Recognize(scaled, w * scale, h * scale, OcrImagePlan.SourceResolution(dpi, scale));

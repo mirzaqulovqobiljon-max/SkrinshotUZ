@@ -114,4 +114,34 @@ public class GrayImageTests
         Assert.Throws<ArgumentException>(() => GrayImage.Upscale(new byte[3], 2, 2, 2));
         Assert.ThrowsAny<ArgumentOutOfRangeException>(() => GrayImage.Upscale(new byte[4], 2, 2, 0));
     }
+
+    [Fact]
+    public void NormalizePolarity_DarkBackground_Inverted()
+    {
+        byte[] g = { 20, 20, 20, 230 };   // qorong'i fon, bitta och "harf"
+
+        Assert.True(GrayImage.NormalizePolarity(g));
+        Assert.Equal(new byte[] { 235, 235, 235, 25 }, g);
+    }
+
+    [Fact]
+    public void NormalizePolarity_LightBackground_Unchanged()
+    {
+        byte[] g = { 250, 250, 250, 10 };
+
+        Assert.False(GrayImage.NormalizePolarity(g));
+        Assert.Equal(new byte[] { 250, 250, 250, 10 }, g);
+    }
+
+    [Fact]
+    public void NormalizePolarity_ThresholdBoundary_AndEmpty()
+    {
+        byte[] atThreshold = { GrayImage.DarkThreshold, GrayImage.DarkThreshold };
+        Assert.False(GrayImage.NormalizePolarity(atThreshold));
+
+        byte[] below = { GrayImage.DarkThreshold - 1, GrayImage.DarkThreshold - 1 };
+        Assert.True(GrayImage.NormalizePolarity(below));
+
+        Assert.False(GrayImage.NormalizePolarity(Array.Empty<byte>()));
+    }
 }

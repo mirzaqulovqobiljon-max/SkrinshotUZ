@@ -42,6 +42,42 @@ public static class GrayImage
         return gray;
     }
 
+    /// <summary>Qorong'i fon chegarasi: o'rtacha yorqinlik shundan past bo'lsa — rasm "tungi rejimda" deb hisoblanadi.</summary>
+    public const int DarkThreshold = 110;
+
+    /// <summary>
+    /// Qorong'i fondagi och matnni (tungi rejimdagi dasturlar, doska ko'rinishidagi slaydlar) oq fondagi qora matnga
+    /// aylantiradi — Tesseract shu ko'rinishda ancha aniqroq o'qiydi. Och fonli rasm o'zgarmaydi.
+    /// </summary>
+    /// <param name="gray">Kulrang rasm (joyida o'zgartiriladi).</param>
+    /// <returns>Rasm teskari qilingan bo'lsa — <c>true</c>.</returns>
+    public static bool NormalizePolarity(byte[] gray)
+    {
+        ArgumentNullException.ThrowIfNull(gray);
+        if (gray.Length == 0)
+        {
+            return false;
+        }
+
+        long sum = 0;
+        foreach (byte v in gray)
+        {
+            sum += v;
+        }
+
+        if (sum >= (long)DarkThreshold * gray.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < gray.Length; i++)
+        {
+            gray[i] = (byte)(255 - gray[i]);
+        }
+
+        return true;
+    }
+
     /// <summary>Bilinear kattalashtirish (piksel markazlari bo'yicha — siljish bo'lmaydi).</summary>
     /// <param name="source">Kulrang rasm.</param>
     /// <param name="width">Kenglik.</param>
